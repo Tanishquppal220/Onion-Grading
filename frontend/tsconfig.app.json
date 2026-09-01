@@ -6,6 +6,7 @@
       "ES2023",
       "DOM"
     ],
+    "composite": true,
     "module": "esnext",
     "types": [
       "vite/client"

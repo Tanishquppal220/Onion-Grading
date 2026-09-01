@@ -1,5 +1,7 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from app.routes.health import router as health_router
 from app.routes.upload import router as upload_router
 
@@ -29,3 +31,6 @@ app.add_middleware(
 # Mount the routers under the /api prefix
 app.include_router(health_router, prefix="/api", tags=["System"])
 app.include_router(upload_router, prefix="/api", tags=["Upload"])
+
+os.makedirs("data/uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="data/uploads"), name="uploads")

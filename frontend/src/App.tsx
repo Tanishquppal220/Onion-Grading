@@ -10,16 +10,16 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { ImageUploader } from "@/components/ImageUploader"
 import { BackendStatus } from "@/components/BackendStatus"
-
-
-
+import { ResultsPane } from "@/components/ResultsPane"
+import { useImageUpload } from "@/hooks/useImageUpload"
 
 function App() {
+	const { uploadImage, isUploading, result, error } = useImageUpload()
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="min-h-screen bg-background overflow-x-hidden">
 			{/* ── Page wrapper ── */}
-			<div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4 py-12">
+			<div className={`mx-auto flex min-h-screen flex-col px-4 py-12 transition-all duration-500 ease-in-out ${result ? "max-w-6xl" : "max-w-2xl"}`}>
 
 				{/* ── Header ── */}
 				<header className="relative mb-10 flex flex-col items-center gap-3 text-center">
@@ -55,20 +55,22 @@ function App() {
 					</div>
 				</header>
 
-				{/* ── Upload Card ── */}
-				<Card className="w-full">
-					<CardHeader>
-						<CardTitle>Upload Onion Image</CardTitle>
-						<CardDescription>
-							Upload a photo of a single bulb or a full sample tray. The AI
-							will detect each bulb, measure its size, and classify defects
-							(Rotten, Sprouted, Damaged, Undersized) against DoCA standards.
-						</CardDescription>
-					</CardHeader>
+				{/* ── Main Content Area ── */}
+				<div className={`grid gap-8 transition-all duration-500 ${result ? "md:grid-cols-2" : "grid-cols-1"}`}>
+					{/* ── Upload Card ── */}
+					<Card className="w-full h-fit">
+						<CardHeader>
+							<CardTitle>Upload Onion Image</CardTitle>
+							<CardDescription>
+								Upload a photo of a single bulb or a full sample tray. The AI
+								will detect each bulb, measure its size, and classify defects
+								(Rotten, Sprouted, Damaged, Undersized) against DoCA standards.
+							</CardDescription>
+						</CardHeader>
 
-					<CardContent>
-						<ImageUploader />
-					</CardContent>
+						<CardContent>
+							<ImageUploader onUpload={uploadImage} isUploading={isUploading} uploadError={error} />
+						</CardContent>
 
 					<CardFooter className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">
@@ -88,6 +90,14 @@ function App() {
 						))}
 					</CardFooter>
 				</Card>
+
+					{/* ── Results Pane ── */}
+					{result && (
+						<div className="animate-in fade-in slide-in-from-right-8 duration-500 h-fit">
+							<ResultsPane data={result.grading} />
+						</div>
+					)}
+				</div>
 
 				{/* ── Footer ── */}
 				<footer className="mt-8 text-center text-xs text-muted-foreground">

@@ -4,9 +4,14 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import * as React from "react";
-import { useImageUpload } from "@/hooks/useImageUpload"
 
 type UploadState = "idle" | "dragging" | "preview" | "error"
+
+interface ImageUploaderProps {
+	onUpload: (file: File) => Promise<void>;
+	isUploading: boolean;
+	uploadError: string | null;
+}
 
 function formatBytes(bytes: number): string {
 	if (bytes < 1024) return `${bytes} B`
@@ -14,19 +19,18 @@ function formatBytes(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 }
 
-export function ImageUploader() {
+export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploaderProps) {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const [state, setState] = useState<UploadState>("idle")
 	const [file, setFile] = useState<File | null>(null)
 	const [preview, setPreview] = useState<string | null>(null)
 	const [errorMsg, setErrorMsg] = useState<string>("")
 
-	const { uploadImage, isUploading, error: uploadError } = useImageUpload()
 
 	const handleAnalyze = async () => {
 		if (!file) return
 		try {
-			await uploadImage(file)
+			await onUpload(file)
 			// Success handling could be added here later (e.g., redirect to results)
 		} catch (e) {
 			console.error("Failed to upload image", e)
