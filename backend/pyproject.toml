@@ -1,0 +1,23 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "matplotlib>=3.11.1",
+    "opencv-python>=5.0.0.93",
+    "pandas>=3.0.5",
+    "pandas-stubs~=3.0.5",
+    "pillow>=12.3.0",
+    "seaborn>=0.13.2",
+    "uvicorn>=0.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.1.1",
+]
+[tool.fastapi]
+    entrypoint = "main:app"
