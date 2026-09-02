@@ -1,9 +1,10 @@
 import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes.health import router as health_router
-from app.routes.upload import router as upload_router
+from routes.health import router as health_router
+from routes.upload import router as upload_router
 
 app = FastAPI(
     title="DoCA Onion Quality Assessment API",

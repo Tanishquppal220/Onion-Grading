@@ -1,7 +1,9 @@
 from pathlib import Path
+
+import cv2
 from pydantic import BaseModel
 from ultralytics import YOLO
-import cv2
+
 
 class GradingResult(BaseModel):
     onion: int = 0
@@ -32,8 +34,10 @@ class OnionGrader:
         Runs YOLO inference on the image, counts instances of each class,
         calculates size based on PPI, and saves an annotated version of the image.
         """
-        # Run inference
-        results = self.model.predict(source=str(image_path), save=False, verbose=False)
+        from typing import Any
+        
+        # Run inference (cast to Any to bypass Pylance false-positive type stubs)
+        results: Any = self.model.predict(source=str(image_path), save=False, verbose=False)
         result = results[0]
         
         # Count classes
