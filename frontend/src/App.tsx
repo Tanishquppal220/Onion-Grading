@@ -72,31 +72,41 @@ function App() {
 							<ImageUploader onUpload={uploadImage} isUploading={isUploading} uploadError={error} />
 						</CardContent>
 
-					<CardFooter className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              Supported defect classes:
-            </span>
-						{[
-							{ label: "Grade A", color: "text-green-500" },
-							{ label: "Rotten", color: "text-red-500" },
-							{ label: "Sprouted", color: "text-yellow-500" },
-							{ label: "Damaged", color: "text-orange-500" },
-							{ label: "Undersized", color: "text-blue-400" },
-						].map(({ label, color }) => (
-							<Badge key={label} variant="outline" className="gap-1 text-xs">
-								<span className={`size-1.5 rounded-full bg-current ${color}`} />
-								{label}
-							</Badge>
-						))}
+					<CardFooter className="flex flex-col items-start gap-2 pt-2 border-t border-border/50 text-xs">
+						<div className="flex flex-wrap items-center gap-1.5">
+							<span className="text-muted-foreground">
+								Procurement Classes:
+							</span>
+							{[
+								{ label: "Sound (Grade A)", color: "text-green-500" },
+								{ label: "Rotten / Decay", color: "text-red-500" },
+								{ label: "Sprouted", color: "text-yellow-500" },
+								{ label: "Damaged (Double Split)", color: "text-orange-500" },
+								{ label: "Undersized (<40mm)", color: "text-blue-400" },
+							].map(({ label, color }) => (
+								<Badge key={label} variant="outline" className="gap-1 text-[11px]">
+									<span className={`size-1.5 rounded-full bg-current ${color}`} />
+									{label}
+								</Badge>
+							))}
+						</div>
+						<p className="text-[10px] text-muted-foreground">
+							* Double-split bulbs are classified under the official DoCA <strong>Damaged</strong> quota due to broken tunic and decay risk in storage.
+						</p>
 					</CardFooter>
 				</Card>
 
 					{/* ── Results Pane ── */}
 					{result && (
 						<div className="animate-in fade-in slide-in-from-right-8 duration-500 h-fit">
-							<ResultsPane data={result.grading} />
+							<ResultsPane
+								data={result.grading}
+								lotMetadata={result.lot_metadata}
+								rawImageFilename={result.filename}
+							/>
 						</div>
 					)}
+
 				</div>
 
 				{/* ── Footer ── */}

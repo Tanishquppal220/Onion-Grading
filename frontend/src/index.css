@@ -128,3 +128,93 @@
     @apply font-sans;
     }
 }
+
+/* ── Print Styles for DoCA Inspection Certificate ── */
+@media print {
+  /* Completely hide the rest of the application so only the certificate is printed */
+  body.printing-certificate-open #root,
+  body:has(#printable-certificate) #root {
+    display: none !important;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm;
+  }
+
+  /* Prevent awkward page cuts in tables, images, and signature blocks */
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  #printable-certificate-backdrop {
+    position: static !important;
+    inset: auto !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  /* Ensure crisp, professional document colors on paper even when dark mode is active */
+  :root,
+  .dark,
+  html.dark #printable-certificate,
+  #printable-certificate {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #1e3a8a;
+    --primary-foreground: #ffffff;
+    --secondary: #f8fafc;
+    --secondary-foreground: #0f172a;
+    --muted: #f8fafc;
+    --muted-foreground: #475569;
+    --accent: #f8fafc;
+    --accent-foreground: #0f172a;
+    --destructive: #b91c1c;
+    --border: #cbd5e1;
+    --input: #cbd5e1;
+    --ring: #1e3a8a;
+    position: static !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+  }
+
+  /* High contrast colors for print status alerts */
+  #printable-certificate .dark\:text-green-300 {
+    color: #14532d !important;
+  }
+  #printable-certificate .dark\:text-amber-300 {
+    color: #78350f !important;
+  }
+  #printable-certificate .dark\:text-red-300 {
+    color: #7f1d1d !important;
+  }
+}
