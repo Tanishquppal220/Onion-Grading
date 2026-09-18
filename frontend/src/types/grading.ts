@@ -63,6 +63,8 @@ export interface AuditMetrics {
   conf_threshold: number
   validation_passed: boolean
   validation_message: string
+  human_detected?: boolean
+  false_positives_filtered?: number
 }
 
 export interface GradingResult {

@@ -1,0 +1,19 @@
+{
+  "short_name": "OnionScan",
+  "name": "OnionScan DoCA - AI Onion Quality & Grading",
+  "description": "Government of India DoCA AI-Powered Onion Quality Assessment & Lot-Level Procurement Grading",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#090d16",
+  "theme_color": "#1e3a8a",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["productivity", "utilities", "business"]
+}

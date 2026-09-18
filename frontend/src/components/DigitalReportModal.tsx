@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Download, ShieldCheck, CheckCircle2 } from "lucide-react"
+import { X, Printer, Download, ShieldCheck, CheckCircle2, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { UploadResponse } from "@/types/grading"
@@ -53,6 +53,33 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
     .toString(16)
     .toUpperCase()}F82B9`
 
+  const handleShareWhatsApp = () => {
+    const lotId = lot_metadata.lot_id
+    const farmer = lot_metadata.farmer_name
+    const mandi = lot_metadata.mandi_location
+    const grade = decision.grade
+    const soundBulbs = quality_percentages.healthy
+    const decisionText = decision.recommendation
+    const totalBulbs = grading.total_detected
+
+    const message = `🌾 *DoCA APMC Onion Quality Inspection Certificate* 🌾
+━━━━━━━━━━━━━━━━━━━━
+📦 *Lot ID*: ${lotId}
+👤 *Farmer*: ${farmer}
+📍 *Mandi*: ${mandi}
+🔢 *Sample Size*: ${totalBulbs} Bulbs
+🏷️ *Official Grade*: *${grade}*
+✅ *Sound Bulb Share*: ${soundBulbs}% (DoCA Target ≥ 85%)
+📊 *Defects*: Rotten: ${quality_percentages.rotten}%, Sprouted: ${quality_percentages.sprouted}%, Damaged: ${quality_percentages.damaged}%, Undersized: ${size_percentages.small}%
+🎯 *Procurement Verdict*: ${decisionText}
+🔒 *Tamper-evident Hash*: ${auditHash}
+━━━━━━━━━━━━━━━━━━━━
+_Digitally verified via DoCA AI Grading System (SIH26031)_`
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`
+    window.open(url, "_blank")
+  }
+
   return createPortal(
     <div
       id="printable-certificate-backdrop"
@@ -67,12 +94,21 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
 
         
         {/* Actions bar (hidden in print) */}
-        <div className="flex items-center justify-between border-b border-border pb-4 mb-6 print:hidden">
+        <div className="flex flex-wrap items-center justify-between border-b border-border pb-4 mb-6 gap-3 print:hidden">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 text-green-500" />
             <span>DoCA Official Procurement Record · Tamper-evident Audit Certificate</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShareWhatsApp}
+              className="gap-1.5 text-xs text-green-700 dark:text-green-400 border-green-600/30 hover:bg-green-500/10 active:scale-95 transition-all"
+            >
+              <Share2 className="size-3.5" />
+              <span>WhatsApp</span>
+            </Button>
             <Button variant="outline" size="sm" onClick={handleDownloadJson} className="gap-1.5 text-xs">
               <Download className="size-3.5" />
               JSON Audit

@@ -6,6 +6,10 @@ import {
   Ruler,
   Layers,
   CheckCircle2,
+  Share2,
+  AlertTriangle,
+  UserX,
+  Camera,
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -86,6 +90,9 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
     validation_message: `Verified: All ${total} detected onions accounted for without duplication.`,
   }
 
+  const isInvalidSample = total === 0 || decision.grade.includes("Invalid") || decision.grade.includes("Inconclusive")
+  const isHumanDetected = Boolean(audit.human_detected || decision.grade.includes("Human"))
+
   // Construct full response object for the report modal
   const reportPayload: UploadResponse = {
     status: "success",
@@ -101,6 +108,32 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
     grading: data,
   }
 
+  const handleShareWhatsApp = () => {
+    const lotId = reportPayload.lot_metadata.lot_id
+    const farmer = reportPayload.lot_metadata.farmer_name
+    const mandi = reportPayload.lot_metadata.mandi_location
+    const grade = decision.grade
+    const soundBulbs = healthyPct
+    const decisionText = decision.recommendation
+    const totalBulbs = total
+
+    const message = `🌾 *DoCA APMC Onion Quality Inspection Certificate* 🌾
+━━━━━━━━━━━━━━━━━━━━
+📦 *Lot ID*: ${lotId}
+👤 *Farmer*: ${farmer}
+📍 *Mandi*: ${mandi}
+🔢 *Sample Size*: ${totalBulbs} Bulbs
+🏷️ *Official Grade*: *${grade}*
+✅ *Sound Bulb Share*: ${soundBulbs}% (DoCA Target ≥ 85%)
+📊 *Defects*: Rotten: ${rottenPct}%, Sprouted: ${sproutPct}%, Damaged: ${damagedPct}%, Undersized: ${smallPct}%
+🎯 *Procurement Verdict*: ${decisionText}
+━━━━━━━━━━━━━━━━━━━━
+_Digitally verified via DoCA AI Grading System (SIH26031)_`
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`
+    window.open(url, "_blank")
+  }
+
 
   return (
     <>
@@ -112,6 +145,8 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
             ? "border-green-500/40 bg-gradient-to-r from-green-500/10 via-background to-background"
             : decision.status === "conditional"
             ? "border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-background"
+            : isHumanDetected
+            ? "border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-background to-background"
             : "border-red-500/40 bg-gradient-to-r from-red-500/10 via-background to-background"
         }`}>
           <div className="p-5 sm:p-6 space-y-4">
@@ -121,6 +156,8 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                   decision.status === "accepted"
                     ? "bg-green-600 text-white hover:bg-green-700"
                     : decision.status === "conditional"
+                    ? "bg-amber-600 text-white hover:bg-amber-700"
+                    : isHumanDetected
                     ? "bg-amber-600 text-white hover:bg-amber-700"
                     : "bg-red-600 text-white hover:bg-red-700"
                 }`}>
@@ -146,17 +183,20 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                 </Button>
                 <Button
                   size="sm"
+                  disabled={isInvalidSample}
                   onClick={() => setIsReportOpen(true)}
                   className="h-8 text-xs gap-1 font-semibold shadow-sm"
+                  title={isInvalidSample ? "Cannot generate certificate for invalid sample" : undefined}
                 >
                   <FileText className="size-3.5" />
-                  Inspection Certificate
+                  {isInvalidSample ? "Certificate Ineligible" : "Inspection Certificate"}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">
+              <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                {isHumanDetected && <UserX className="size-5 text-amber-500 shrink-0" />}
                 {decision.recommendation}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -171,22 +211,66 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                 <p className="text-base font-bold text-foreground font-mono">{total} Bulbs</p>
               </div>
               <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Healthy Grade A</span>
-                <p className="text-base font-bold text-green-600 font-mono">{healthyPct}%</p>
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Sample Status</span>
+                <p className={`text-base font-bold font-mono ${isInvalidSample ? "text-amber-500" : "text-green-600"}`}>
+                  {isHumanDetected ? "Human Subject" : isInvalidSample ? "Zero Bulbs" : `${healthyPct}% Sound`}
+                </p>
               </div>
               <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Cumulative Defects</span>
-                <p className="text-base font-bold text-red-500 font-mono">{(100 - healthyPct).toFixed(1)}%</p>
+                <span className="text-[10px] uppercase font-semibold text-muted-foreground">
+                  {isInvalidSample ? "Artifacts Neutralized" : "Cumulative Defects"}
+                </span>
+                <p className="text-base font-bold text-red-500 font-mono">
+                  {isInvalidSample ? `${audit.false_positives_filtered ?? 0} Filtered` : `${(100 - healthyPct).toFixed(1)}%`}
+                </p>
               </div>
               <div className="p-2 rounded-lg bg-muted/40">
                 <span className="text-[10px] uppercase font-semibold text-muted-foreground">Buffer Fit</span>
-                <p className={`text-base font-bold ${decision.buffer_stock_fit ? "text-green-600" : "text-amber-600"}`}>
-                  {decision.buffer_stock_fit ? "Approved" : "Non-Buffer"}
+                <p className={`text-base font-bold ${decision.buffer_stock_fit ? "text-green-600" : isInvalidSample ? "text-red-500" : "text-amber-600"}`}>
+                  {decision.buffer_stock_fit ? "Approved" : "Ineligible"}
                 </p>
               </div>
             </div>
           </div>
         </Card>
+
+        {/* ── Sampling Protocol Guidance Banner for Invalid Samples ── */}
+        {isInvalidSample && (
+          <Card className={`border-2 ${isHumanDetected ? "border-amber-500/40 bg-amber-500/5" : "border-destructive/30 bg-destructive/5"}`}>
+            <CardContent className="p-4 sm:p-5 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-lg shrink-0 ${isHumanDetected ? "bg-amber-500/15 text-amber-600" : "bg-destructive/15 text-destructive"}`}>
+                  {isHumanDetected ? <UserX className="size-5" /> : <AlertTriangle className="size-5" />}
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-bold text-foreground">
+                    {isHumanDetected
+                      ? "Out-of-Domain Guard Active: Human Subject Suppressed"
+                      : "No Onion Bulbs Localized in Sample Frame"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    {isHumanDetected
+                      ? "The system localized human facial keypoints in the camera frame. All spurious onion candidate boxes were automatically suppressed to safeguard APMC procurement records."
+                      : "The computer vision model did not find onion bulbs in this image. Please ensure sufficient illumination and appropriate camera angle."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-background/80 border border-border p-3.5 space-y-2 text-xs">
+                <p className="font-semibold text-foreground flex items-center gap-1.5">
+                  <Camera className="size-3.5 text-primary" />
+                  Recommended Protocol for Valid DoCA APMC Grading:
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1">
+                  <li>Spread onion sample in a <strong>single non-overlapping layer</strong> on a flat tray or clean sheet.</li>
+                  <li>Hold camera perpendicularly (~40–50 cm) directly above the bulbs.</li>
+                  <li>Ensure only onion produce is within the camera viewfinder (no people, faces, or indoor furniture).</li>
+                  <li>Check that lighting is uniform with minimal heavy shadows.</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Annotated Detection Image Card ── */}
         <Card>
@@ -219,11 +303,21 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground px-1">
               <div className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-green-500" />
-                <span>Single detection per physical bulb (0 double-counts)</span>
+                <span className={`size-2 rounded-full ${isInvalidSample ? "bg-amber-500" : "bg-green-500"}`} />
+                <span>
+                  {isHumanDetected
+                    ? "Pose Guard active: Human facial keypoints suppressed"
+                    : isInvalidSample
+                    ? "No physical bulbs localized"
+                    : "Single detection per physical bulb (0 double-counts)"}
+                </span>
               </div>
               <div className="font-mono">
-                Model Mean Confidence: <span className="font-bold text-foreground">{audit.avg_confidence}%</span>
+                {isInvalidSample ? (
+                  <span>Non-Bulbs Neutralized: <span className="font-bold text-foreground">{audit.false_positives_filtered ?? 0}</span></span>
+                ) : (
+                  <span>Model Mean Confidence: <span className="font-bold text-foreground">{audit.avg_confidence}%</span></span>
+                )}
               </div>
             </div>
           </CardContent>
@@ -245,136 +339,145 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-border">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
-                  <tr>
-                    <th className="px-3.5 py-2.5">Category</th>
-                    <th className="px-3.5 py-2.5">Count</th>
-                    <th className="px-3.5 py-2.5">Lot %</th>
-                    <th className="px-3.5 py-2.5">DoCA Limit</th>
-                    <th className="px-3.5 py-2.5 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {/* Healthy Grade A */}
-                  <tr>
-                    <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-green-500 shrink-0" />
-                      Sound Bulbs (Healthy Grade A)
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono">{healthyCount}</td>
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{healthyPct}%</td>
-                    <td className="px-3.5 py-2.5 text-muted-foreground">≥ 85% Min</td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {healthyPct >= 85 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Pass (Grade I)</Badge>
-                      ) : healthyPct >= 70 ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Warning (Grade II)</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (URS)</Badge>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Rotten */}
-                  <tr>
-                    <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-red-500 shrink-0" />
-                      Rotten / Decayed
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono">{rottenCount}</td>
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{rottenPct}%</td>
-                    <td className="px-3.5 py-2.5 text-muted-foreground">≤ 2% Max (URS &gt;4%)</td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {rottenPct <= 2.0 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                      ) : rottenPct <= 4.0 ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Sprouted */}
-                  <tr>
-                    <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-yellow-500 shrink-0" />
-                      Sprouted
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono">{sproutedCount}</td>
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{sproutedPct}%</td>
-                    <td className="px-3.5 py-2.5 text-muted-foreground">≤ 3% Max (URS &gt;7%)</td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {sproutedPct <= 3.0 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                      ) : sproutedPct <= 7.0 ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Damaged (Double Split) */}
-                  <tr>
-                    <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-orange-500 shrink-0" />
-                      <span>Damaged <span className="text-[10px] text-muted-foreground">(Double Split)</span></span>
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono">{damagedCount}</td>
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{damagedPct}%</td>
-                    <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {damagedPct <= 5.0 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                      ) : damagedPct <= 10.0 ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
-                      )}
-                    </td>
-                  </tr>
-
-                  {/* Undersized (<40mm) */}
-                  <tr>
-                    <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                      <span className="size-2.5 rounded-full bg-blue-400 shrink-0" />
-                      <span>Undersized <span className="text-[10px] text-muted-foreground">(&lt; 40 mm)</span></span>
-                    </td>
-                    <td className="px-3.5 py-2.5 font-mono">{smallCount}</td>
-                    <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{smallPct}%</td>
-                    <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
-                    <td className="px-3.5 py-2.5 text-right">
-                      {smallPct <= 5.0 ? (
-                        <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                      ) : smallPct <= 10.0 ? (
-                        <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded</Badge>
-                      )}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Visual Tolerance Comparison Bar */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Lot Defect Composition</span>
-                <span className="font-medium text-foreground">
-                  Healthy: {healthyPct}% · Defects: {(100 - healthyPct).toFixed(1)}%
-                </span>
+            {total === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-xs space-y-1.5 rounded-xl border border-dashed border-border bg-muted/10">
+                <p className="font-semibold text-foreground">No Onion Bulbs Localized</p>
+                <p>Quality breakdown and DoCA tolerance checks will appear once an authentic onion sample tray is uploaded.</p>
               </div>
-              <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted">
-                <div style={{ width: `${healthyPct}%` }} className="bg-green-500 transition-all duration-500" title={`Healthy: ${healthyPct}%`} />
-                <div style={{ width: `${rottenPct}%` }} className="bg-red-500 transition-all duration-500" title={`Rotten: ${rottenPct}%`} />
-                <div style={{ width: `${sproutedPct}%` }} className="bg-yellow-500 transition-all duration-500" title={`Sprouted: ${sproutedPct}%`} />
-                <div style={{ width: `${damagedPct}%` }} className="bg-orange-500 transition-all duration-500" title={`Damaged: ${damagedPct}%`} />
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="overflow-hidden rounded-xl border border-border">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+                      <tr>
+                        <th className="px-3.5 py-2.5">Category</th>
+                        <th className="px-3.5 py-2.5">Count</th>
+                        <th className="px-3.5 py-2.5">Lot %</th>
+                        <th className="px-3.5 py-2.5">DoCA Limit</th>
+                        <th className="px-3.5 py-2.5 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {/* Healthy Grade A */}
+                      <tr>
+                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-green-500 shrink-0" />
+                          Sound Bulbs (Healthy Grade A)
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono">{healthyCount}</td>
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{healthyPct}%</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≥ 85% Min</td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {healthyPct >= 85 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Pass (Grade I)</Badge>
+                          ) : healthyPct >= 70 ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Warning (Grade II)</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (URS)</Badge>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Rotten */}
+                      <tr>
+                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-red-500 shrink-0" />
+                          Rotten / Decayed
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono">{rottenCount}</td>
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{rottenPct}%</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 2% Max (URS &gt;4%)</td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {rottenPct <= 2.0 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
+                          ) : rottenPct <= 4.0 ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Sprouted */}
+                      <tr>
+                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-yellow-500 shrink-0" />
+                          Sprouted
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono">{sproutedCount}</td>
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{sproutedPct}%</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 3% Max (URS &gt;7%)</td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {sproutedPct <= 3.0 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
+                          ) : sproutedPct <= 7.0 ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Damaged (Double Split) */}
+                      <tr>
+                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-orange-500 shrink-0" />
+                          <span>Damaged <span className="text-[10px] text-muted-foreground">(Double Split)</span></span>
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono">{damagedCount}</td>
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{damagedPct}%</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {damagedPct <= 5.0 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
+                          ) : damagedPct <= 10.0 ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Undersized (<40mm) */}
+                      <tr>
+                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-blue-400 shrink-0" />
+                          <span>Undersized <span className="text-[10px] text-muted-foreground">(&lt; 40 mm)</span></span>
+                        </td>
+                        <td className="px-3.5 py-2.5 font-mono">{smallCount}</td>
+                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{smallPct}%</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
+                        <td className="px-3.5 py-2.5 text-right">
+                          {smallPct <= 5.0 ? (
+                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
+                          ) : smallPct <= 10.0 ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Visual Tolerance Comparison Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Lot Defect Composition</span>
+                    <span className="font-medium text-foreground">
+                      Healthy: {healthyPct}% · Defects: {(100 - healthyPct).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted">
+                    <div style={{ width: `${healthyPct}%` }} className="bg-green-500 transition-all duration-500" title={`Healthy: ${healthyPct}%`} />
+                    <div style={{ width: `${rottenPct}%` }} className="bg-red-500 transition-all duration-500" title={`Rotten: ${rottenPct}%`} />
+                    <div style={{ width: `${sproutedPct}%` }} className="bg-yellow-500 transition-all duration-500" title={`Sprouted: ${sproutedPct}%`} />
+                    <div style={{ width: `${damagedPct}%` }} className="bg-orange-500 transition-all duration-500" title={`Damaged: ${damagedPct}%`} />
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -395,27 +498,36 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="p-3 rounded-xl border border-border bg-muted/20">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Large (&gt; 70 mm)</span>
-                <p className="text-xl font-bold font-mono text-foreground mt-1">{largeCount}</p>
-                <p className="text-[10px] text-muted-foreground">{largePct}% of lot</p>
+            {total === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-xs space-y-1.5 rounded-xl border border-dashed border-border bg-muted/10">
+                <p className="font-semibold text-foreground">No Diametric Size Contours</p>
+                <p>Equatorial diameter sizing requires localized bulb boundaries.</p>
               </div>
-              <div className="p-3 rounded-xl border border-primary/40 bg-primary/5">
-                <span className="text-[10px] uppercase font-bold text-primary">Medium (40–70 mm) [FAQ Target]</span>
-                <p className="text-xl font-bold font-mono text-primary mt-1">{mediumCount}</p>
-                <p className="text-[10px] text-primary/80 font-medium">{mediumPct}% of lot</p>
-              </div>
-              <div className="p-3 rounded-xl border border-border bg-muted/20">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Small (&lt; 40 mm) [Undersized]</span>
-                <p className="text-xl font-bold font-mono text-foreground mt-1">{smallCount}</p>
-                <p className="text-[10px] text-muted-foreground">{smallPct}% of lot</p>
-              </div>
-            </div>
-            
-            <p className="text-[11px] text-muted-foreground leading-relaxed italic">
-              {calibration.description}
-            </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 rounded-xl border border-border bg-muted/20">
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Large (&gt; 70 mm)</span>
+                    <p className="text-xl font-bold font-mono text-foreground mt-1">{largeCount}</p>
+                    <p className="text-[10px] text-muted-foreground">{largePct}% of lot</p>
+                  </div>
+                  <div className="p-3 rounded-xl border border-primary/40 bg-primary/5">
+                    <span className="text-[10px] uppercase font-bold text-primary">Medium (40–70 mm) [FAQ Target]</span>
+                    <p className="text-xl font-bold font-mono text-primary mt-1">{mediumCount}</p>
+                    <p className="text-[10px] text-primary/80 font-medium">{mediumPct}% of lot</p>
+                  </div>
+                  <div className="p-3 rounded-xl border border-border bg-muted/20">
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Small (&lt; 40 mm) [Undersized]</span>
+                    <p className="text-xl font-bold font-mono text-foreground mt-1">{smallCount}</p>
+                    <p className="text-[10px] text-muted-foreground">{smallPct}% of lot</p>
+                  </div>
+                </div>
+                
+                <p className="text-[11px] text-muted-foreground leading-relaxed italic">
+                  {calibration.description}
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -440,26 +552,48 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
         </Card>
 
         {/* ── Audit & Verification Confirmation ── */}
-        <Card className="border-primary/20 bg-primary/5">
+        <Card className={isInvalidSample ? "border-amber-500/20 bg-amber-500/5" : "border-primary/20 bg-primary/5"}>
           <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
             <div className="space-y-0.5">
               <div className="flex items-center gap-1.5 font-bold text-foreground">
-                <CheckCircle2 className="size-4 text-green-500" />
-                <span>Anti-Double-Counting Integrity Verified</span>
+                {isInvalidSample ? (
+                  <ShieldCheck className="size-4 text-amber-500" />
+                ) : (
+                  <CheckCircle2 className="size-4 text-green-500" />
+                )}
+                <span>
+                  {isInvalidSample
+                    ? "Out-of-Domain Guard Integrity Verified"
+                    : "Anti-Double-Counting Integrity Verified"}
+                </span>
               </div>
               <p className="text-muted-foreground text-[11px]">
-                {audit.duplicates_suppressed} candidate overlapping boxes suppressed via Class-Agnostic NMS.
-                Each physical bulb is assigned exactly one primary detection.
+                {isInvalidSample
+                  ? `Automated biometric guard suppressed ${audit.false_positives_filtered ?? 0} candidate non-onion boxes. Official APMC certificate issuance is locked for non-agricultural frames.`
+                  : `${audit.duplicates_suppressed} candidate overlapping boxes suppressed via Class-Agnostic NMS. Each physical bulb is assigned exactly one primary detection.`}
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setIsReportOpen(true)}
-              className="gap-1.5 shrink-0 shadow-sm"
-            >
-              <FileText className="size-4" />
-              Generate Official Certificate
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isInvalidSample}
+                onClick={handleShareWhatsApp}
+                className="gap-1.5 border-green-600/40 text-green-700 dark:text-green-400 hover:bg-green-500/10 active:scale-95 transition-all text-xs"
+              >
+                <Share2 className="size-3.5" />
+                <span>Share WhatsApp</span>
+              </Button>
+              <Button
+                size="sm"
+                disabled={isInvalidSample}
+                onClick={() => setIsReportOpen(true)}
+                className="gap-1.5 shadow-sm text-xs"
+              >
+                <FileText className="size-4" />
+                <span>{isInvalidSample ? "Certificate Blocked" : "Official Certificate"}</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

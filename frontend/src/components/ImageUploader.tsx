@@ -12,13 +12,16 @@ import {
   Hash,
   Sparkles,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Camera,
+  Smartphone
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { CalibrationSettingsModal, type CalibrationConfig } from "@/components/CalibrationSettingsModal"
+import { LiveCameraModal } from "@/components/LiveCameraModal"
 import type { UploadOptions } from "@/hooks/useImageUpload"
 
 type UploadState = "idle" | "dragging" | "preview" | "error"
@@ -38,10 +41,12 @@ function formatBytes(bytes: number): string {
 
 export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
   const [state, setState] = useState<UploadState>("idle")
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string>("")
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false)
 
   // Procurement Lot Details
   const [lotId, setLotId] = useState<string>(() => `DOCA-${Math.floor(1000 + Math.random() * 9000)}`)
@@ -134,8 +139,11 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
   // Load sample image preset
   const loadSample = async (filename: string) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
-      const res = await fetch(`${baseUrl}/uploads/${filename}`)
+      let res = await fetch(`/samples/${filename}`)
+      if (!res.ok) {
+        const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+        res = await fetch(`${baseUrl}/uploads/${filename}`)
+      }
       if (!res.ok) throw new Error("Could not fetch sample")
       const blob = await res.blob()
       const sampleFile = new File([blob], filename, { type: "image/jpeg" })
@@ -153,6 +161,16 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
         ref={inputRef}
         type="file"
         accept="image/*"
+        className="hidden"
+        onChange={handleInputChange}
+      />
+
+      {/* Hidden camera capture input for direct rear phone camera */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         className="hidden"
         onChange={handleInputChange}
       />
@@ -233,6 +251,27 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
             </div>
           </div>
         )}
+      </div>
+
+      {/* ── Mobile Field Action Bar (1-Tap Live Camera & Native Camera) ── */}
+      <div className="grid grid-cols-2 gap-2">
+        <Button
+          type="button"
+          onClick={() => setIsLiveCameraOpen(true)}
+          className="h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs gap-1.5 shadow-md active:scale-[0.99] transition-all"
+        >
+          <Camera className="size-4" />
+          <span className="truncate">Live Viewfinder HUD</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => cameraInputRef.current?.click()}
+          className="h-10 text-xs gap-1.5 border-border font-medium hover:bg-muted active:scale-[0.99] transition-all"
+        >
+          <Smartphone className="size-4 text-primary" />
+          <span className="truncate">Device Rear Camera</span>
+        </Button>
       </div>
 
       {/* ── Upload Zone ── */}
@@ -393,6 +432,13 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
         onClose={() => setIsCalibModalOpen(false)}
         currentConfig={calibConfig}
         onSave={(newConfig) => setCalibConfig(newConfig)}
+      />
+
+      {/* Live Camera Viewfinder Modal with Sampling Tray HUD */}
+      <LiveCameraModal
+        isOpen={isLiveCameraOpen}
+        onClose={() => setIsLiveCameraOpen(false)}
+        onCapture={(capturedFile) => acceptFile(capturedFile)}
       />
     </div>
   )

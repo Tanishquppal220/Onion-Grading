@@ -70,6 +70,8 @@ class AuditMetrics(BaseModel):
     conf_threshold: float
     validation_passed: bool
     validation_message: str
+    human_detected: bool = False
+    false_positives_filtered: int = 0
 
 
 class GradingResult(BaseModel):
@@ -99,10 +101,27 @@ class OnionGrader:
     DEFAULT_PPI = 40.0
     DEFAULT_MM_PER_PIXEL = 25.4 / DEFAULT_PPI  # ~0.635 mm/px
 
-    def __init__(self, model_path: str | Path):
-        """Initializes the YOLO model from the given path."""
+    def __init__(self, model_path: str | Path, pose_model_path: str | Path | None = None):
+        """Initializes the YOLO model and loads the pose guard for out-of-domain face suppression."""
         self.model = YOLO(str(model_path))
         self.names = self.model.names  # {0: 'double_split', 1: 'onion', 2: 'rotten', 3: 'sprout'}
+
+        # Locate pose model for human face suppression
+        candidate_paths = [
+            Path(pose_model_path) if pose_model_path else None,
+            Path(model_path).parent / "yolov8n-pose.pt",
+            Path("backend/model/yolov8n-pose.pt"),
+            Path("model/yolov8n-pose.pt"),
+            Path("yolov8n-pose.pt"),
+        ]
+        self.pose_model = None
+        for p in candidate_paths:
+            if p and p.exists():
+                try:
+                    self.pose_model = YOLO(str(p))
+                    break
+                except Exception as e:
+                    print(f"Warning: could not load pose model from {p}: {e}")
 
     def process_image(
         self,
@@ -142,7 +161,46 @@ class OnionGrader:
             calib_label = f"Coin Calibrated ({mm_per_pixel:.3f} mm/px)"
             calib_desc = "Calibrated using ₹10 reference coin (25 mm diameter)."
 
-        # 1. Run raw inference without class-agnostic NMS to track suppressed duplicates
+        # 1. Human Face & Pose Guard to eliminate out-of-domain false positives
+        human_detected = False
+        face_boxes: List[List[float]] = []
+
+        if self.pose_model is not None:
+            try:
+                pose_results = self.pose_model.predict(
+                    source=str(image_path),
+                    conf=0.30,
+                    verbose=False,
+                )
+                if pose_results and len(pose_results) > 0:
+                    pose_res = pose_results[0]
+                    orig_h, orig_w = pose_res.orig_shape
+
+                    for box, kp in zip(pose_res.boxes, pose_res.keypoints):
+                        kps = kp.xy[0][:5].tolist()
+                        confs = kp.conf[0][:5].tolist() if kp.conf is not None else [1.0] * 5
+
+                        # Detect face if nose and at least one eye have confidence > 0.40
+                        if confs[0] > 0.40 and (confs[1] > 0.40 or confs[2] > 0.40):
+                            human_detected = True
+                            valid_xs = [kps[i][0] for i in range(5) if confs[i] > 0.25]
+                            valid_ys = [kps[i][1] for i in range(5) if confs[i] > 0.25]
+                            if valid_xs and valid_ys:
+                                fx1, fy1 = max(0.0, min(valid_xs)), max(0.0, min(valid_ys))
+                                fx2, fy2 = min(float(orig_w), max(valid_xs)), min(float(orig_h), max(valid_ys))
+                                fw, fh = fx2 - fx1, fy2 - fy1
+                                # Expand face box to cover full head/chin/forehead
+                                expanded_face = [
+                                    max(0.0, fx1 - fw * 0.45),
+                                    max(0.0, fy1 - fh * 0.55),
+                                    min(float(orig_w), fx2 + fw * 0.45),
+                                    min(float(orig_h), fy2 + fh * 0.55),
+                                ]
+                                face_boxes.append(expanded_face)
+            except Exception as err:
+                print(f"Pose guard check error: {err}")
+
+        # 2. Run raw inference without class-agnostic NMS to track suppressed duplicates
         raw_results: Any = self.model.predict(
             source=str(image_path),
             conf=conf_threshold,
@@ -152,8 +210,7 @@ class OnionGrader:
         )
         raw_boxes_count = len(raw_results[0].boxes) if raw_results and len(raw_results) > 0 else 0
 
-        # 2. Run deduplicated inference with Class-Agnostic NMS
-        # This prevents a single bulb from having multiple detections (e.g. 'onion' + 'rotten')
+        # 3. Run deduplicated inference with Class-Agnostic NMS
         results: Any = self.model.predict(
             source=str(image_path),
             conf=conf_threshold,
@@ -162,43 +219,77 @@ class OnionGrader:
             verbose=False,
         )
         result = results[0]
-        boxes = result.boxes
-        total_detected = len(boxes)
-        duplicates_suppressed = max(0, raw_boxes_count - total_detected)
+        raw_dedup_boxes = result.boxes
 
-        # Count classes & sizes
+        # 4. Filter candidate boxes for false positives (human faces, curtain creases, impossible sizes)
         counts = {"onion": 0, "double_split": 0, "rotten": 0, "sprout": 0}
         sizes = {"small": 0, "medium": 0, "large": 0}
         confidences: List[float] = []
+        valid_boxes_data: List[dict] = []
+        false_positives_filtered = 0
 
-        for box in boxes:
+        for box in raw_dedup_boxes:
             class_id = int(box.cls[0].item())
             class_name = self.names.get(class_id, "unknown")
-            if class_name in counts:
-                counts[class_name] += 1
-
             conf = float(box.conf[0].item())
-            confidences.append(conf)
 
-            # Calculate size in mm
-            # box.xywh[0] contains [x_center, y_center, width, height]
-            width = box.xywh[0][2].item()
-            height = box.xywh[0][3].item()
-            diameter_px = max(width, height)
+            xyxy = box.xyxy[0].tolist()
+            bw = xyxy[2] - xyxy[0]
+            bh = xyxy[3] - xyxy[1]
+            box_area = bw * bh
+            aspect_ratio = max(bw, bh) / (min(bw, bh) + 1e-6)
+
+            # Check 1: Overlap with detected human face
+            is_face_overlap = False
+            for fb in face_boxes:
+                ix1, iy1 = max(xyxy[0], fb[0]), max(xyxy[1], fb[1])
+                ix2, iy2 = min(xyxy[2], fb[2]), min(xyxy[3], fb[3])
+                if ix2 > ix1 and iy2 > iy1:
+                    inter = (ix2 - ix1) * (iy2 - iy1)
+                    if (inter / (box_area + 1e-6)) > 0.30:
+                        is_face_overlap = True
+                        break
+
+            if is_face_overlap:
+                false_positives_filtered += 1
+                continue
+
+            # Check 2: Aspect ratio filter (eliminates curtain folds, window borders, wall artifacts)
+            if aspect_ratio > 1.85:
+                false_positives_filtered += 1
+                continue
+
+            # Size computation based on calibrated or estimated mm_per_pixel
+            diameter_px = max(bw, bh)
             diameter_mm = diameter_px * mm_per_pixel
 
-            # Categorize size according to AGMARK / DoCA FAQ criteria
+            if class_name in counts:
+                counts[class_name] += 1
+            confidences.append(conf)
+
             if diameter_mm < 40.0:
                 sizes["small"] += 1
+                size_cat = "small"
             elif diameter_mm <= 70.0:
                 sizes["medium"] += 1
+                size_cat = "medium"
             else:
                 sizes["large"] += 1
+                size_cat = "large"
 
+            valid_boxes_data.append({
+                "class_name": class_name,
+                "conf": conf,
+                "xyxy": xyxy,
+                "diameter_mm": diameter_mm,
+                "size_cat": size_cat,
+            })
+
+        total_detected = len(valid_boxes_data)
+        duplicates_suppressed = max(0, raw_boxes_count - (len(raw_dedup_boxes) - false_positives_filtered))
         avg_conf = (sum(confidences) / len(confidences) * 100) if confidences else 0.0
 
         # Quality breakdown mapping
-        # In DoCA standards: double_split represents structural / split damage
         healthy_count = counts["onion"]
         rotten_count = counts["rotten"]
         sprouted_count = counts["sprout"]
@@ -234,27 +325,73 @@ class OnionGrader:
             quality_pcts = QualityPercentages()
             size_pcts = SizePercentages()
 
-        # 3. Rule-based evaluation against DoCA / AGMARK FAQ standards
+        # Rule-based evaluation against DoCA / AGMARK FAQ standards
         decision = self._evaluate_doca_standards(
             total_detected=total_detected,
             quality_counts=quality_counts,
             quality_percentages=quality_pcts,
             size_counts=size_counts,
             size_percentages=size_pcts,
+            human_detected=human_detected,
+            false_positives_filtered=false_positives_filtered,
         )
 
-        # 4. Integrity check
+        # Integrity check
         quality_sum = healthy_count + rotten_count + sprouted_count + damaged_count
         size_sum = sizes["small"] + sizes["medium"] + sizes["large"]
         validation_passed = (total_detected == quality_sum == size_sum)
         validation_message = (
-            f"Verified: All {total_detected} detected onions are accounted for with zero double-counting."
+            f"Verified: All {total_detected} detected onions accounted for (0 double-counts)."
             if validation_passed
             else f"Validation warning: Detected {total_detected}, Quality sum {quality_sum}, Size sum {size_sum}."
         )
 
-        # 5. Save annotated image
-        annotated_img = result.plot()
+        # 5. Render custom, clean annotated image (only valid onions + optional face warning)
+        annotated_img = cv2.imread(str(image_path))
+        if annotated_img is None:
+            annotated_img = result.plot()
+        else:
+            color_map = {
+                "onion": (34, 197, 94),         # Green
+                "rotten": (37, 38, 220),        # Red
+                "sprout": (8, 179, 234),        # Gold/Yellow
+                "double_split": (22, 115, 249), # Orange
+            }
+            display_names = {
+                "onion": "Sound",
+                "rotten": "Rotten",
+                "sprout": "Sprout",
+                "double_split": "Damaged",
+            }
+
+            for item in valid_boxes_data:
+                cname = item["class_name"]
+                cconf = item["conf"]
+                b = [int(v) for v in item["xyxy"]]
+                col = color_map.get(cname, (200, 200, 200))
+                d_mm = item["diameter_mm"]
+
+                # Draw bounding box
+                cv2.rectangle(annotated_img, (b[0], b[1]), (b[2], b[3]), col, 3)
+
+                # Draw label tag with background
+                tag = f"{display_names.get(cname, cname)} {cconf:.2f} · {d_mm:.0f}mm"
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.5
+                thickness = 1
+                (tw, th), _ = cv2.getTextSize(tag, font, font_scale, thickness)
+                tag_y1 = max(0, b[1] - th - 8)
+                tag_y2 = b[1]
+                cv2.rectangle(annotated_img, (b[0], tag_y1), (b[0] + tw + 6, tag_y2), col, -1)
+                cv2.putText(annotated_img, tag, (b[0] + 3, tag_y2 - 4), font, font_scale, (255, 255, 255), thickness, cv2.LINE_AA)
+
+            # If human face was detected and suppressed, draw an informational marker
+            for fb in face_boxes:
+                fb_int = [int(v) for v in fb]
+                cv2.rectangle(annotated_img, (fb_int[0], fb_int[1]), (fb_int[2], fb_int[3]), (0, 165, 255), 2)
+                face_tag = "Human Face (Ignored)"
+                cv2.putText(annotated_img, face_tag, (fb_int[0] + 4, fb_int[1] + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 165, 255), 2, cv2.LINE_AA)
+
         annotated_filename = f"graded_{image_path.name}"
         annotated_path = output_dir / annotated_filename
         cv2.imwrite(str(annotated_path), annotated_img)
@@ -291,6 +428,8 @@ class OnionGrader:
                 conf_threshold=conf_threshold,
                 validation_passed=validation_passed,
                 validation_message=validation_message,
+                human_detected=human_detected,
+                false_positives_filtered=false_positives_filtered,
             ),
         )
 
@@ -301,12 +440,27 @@ class OnionGrader:
         quality_percentages: QualityPercentages,
         size_counts: SizeBreakdown,
         size_percentages: SizePercentages,
+        human_detected: bool = False,
+        false_positives_filtered: int = 0,
     ) -> DecisionResult:
         """
         Evaluates detected onion statistics against DoCA (Department of Consumer Affairs)
         and AGMARK Fair Average Quality (FAQ) Procurement Specifications.
         """
         if total_detected == 0:
+            if human_detected:
+                return DecisionResult(
+                    grade="Invalid Sample (Human Subject Detected)",
+                    status="rejected",
+                    recommendation="Re-align camera directly over onion sampling tray",
+                    summary="A human face/person was detected in the camera frame. False positive detections were suppressed.",
+                    buffer_stock_fit=False,
+                    reasons=[
+                        "Detected human subject in camera frame; false positive classifications suppressed.",
+                        "For authentic lot grading, position phone ~45cm flat over an onion sampling tray.",
+                    ],
+                    compliance_rules=[],
+                )
             return DecisionResult(
                 grade="Inconclusive (No Bulbs Detected)",
                 status="rejected",
