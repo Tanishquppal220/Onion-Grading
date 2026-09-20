@@ -235,3 +235,125 @@ def test_api_grade_report_pdf(test_client, sample_onion_image):
     assert "inspection_report_LOT-API-PDF.pdf" in response.headers["content-disposition"]
     assert response.content.startswith(b"%PDF-")
     assert len(response.content) > 10000
+
+
+def test_api_health_frontend_alias(test_client):
+    """Tests GET /api/health alias used by frontend useBackendStatus."""
+    resp = test_client.get("/api/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "healthy"
+    assert data["models_loaded"] is True
+
+
+def test_api_upload_frontend_endpoint(test_client, sample_onion_image):
+    """Tests POST /api/upload matching the exact React frontend contract."""
+    _, img_encoded = cv2.imencode(".jpg", sample_onion_image)
+    file_bytes = img_encoded.tobytes()
+
+    response = test_client.post(
+        "/api/upload",
+        files={"file": ("test_onion.jpg", io.BytesIO(file_bytes), "image/jpeg")},
+        data={
+            "lot_id": "DOCA-TEST-4082",
+            "farmer_name": "Ramesh Patil",
+            "mandi_location": "Lasalgaon APMC, Nashik",
+            "lot_weight_kg": "50.0",
+            "calibration_mode": "aruco_50mm",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    assert payload["status"] == "success"
+    assert payload["filename"].startswith("raw_DOCA-TEST-4082_")
+    assert payload["message"] == "Inspection completed successfully"
+
+    # Lot metadata
+    meta = payload["lot_metadata"]
+    assert meta["lot_id"] == "DOCA-TEST-4082"
+    assert meta["farmer_name"] == "Ramesh Patil"
+    assert meta["mandi_location"] == "Lasalgaon APMC, Nashik"
+    assert meta["lot_weight_kg"] == 50.0
+
+    # Grading structure
+    grading = payload["grading"]
+    assert grading["total_detected"] > 0
+    assert "quality_counts" in grading
+    assert "healthy" in grading["quality_counts"]
+    assert "rotten" in grading["quality_counts"]
+    assert "sprouted" in grading["quality_counts"]
+    assert "damaged" in grading["quality_counts"]
+
+    assert "quality_percentages" in grading
+    assert "size_counts" in grading
+    assert "small" in grading["size_counts"]
+    assert "medium" in grading["size_counts"]
+    assert "large" in grading["size_counts"]
+
+    assert "size_percentages" in grading
+    assert "decision" in grading
+    assert grading["decision"]["grade"] in [
+        "Grade I (FAQ - Accepted)",
+        "Grade II (FAQ - Conditional)",
+        "URS (Under Rejection Standard)",
+    ]
+    assert grading["decision"]["status"] in ["accepted", "conditional", "rejected"]
+    assert len(grading["decision"]["compliance_rules"]) >= 4
+
+    assert "calibration" in grading
+    assert "audit_metrics" in grading
+    assert grading["audit_metrics"]["total_detected"] == grading["total_detected"]
+    assert grading["annotated_image_filename"].startswith("annotated_DOCA-TEST-4082_")
+
+
+def test_api_static_uploads_serving(test_client, sample_onion_image):
+    """Tests static file serving of raw and annotated images via /uploads/."""
+    _, img_encoded = cv2.imencode(".jpg", sample_onion_image)
+    file_bytes = img_encoded.tobytes()
+
+    post_resp = test_client.post(
+        "/api/upload",
+        files={"file": ("test_onion.jpg", io.BytesIO(file_bytes), "image/jpeg")},
+        data={"lot_id": "DOCA-STATIC-01"},
+    )
+    assert post_resp.status_code == 200
+    payload = post_resp.json()
+    raw_name = payload["filename"]
+    annotated_name = payload["grading"]["annotated_image_filename"]
+
+    # Verify static retrieval
+    raw_resp = test_client.get(f"/uploads/{raw_name}")
+    assert raw_resp.status_code == 200
+    assert raw_resp.headers["content-type"] in ["image/jpeg", "image/jpg"]
+
+    ann_resp = test_client.get(f"/uploads/{annotated_name}")
+    assert ann_resp.status_code == 200
+    assert ann_resp.headers["content-type"] in ["image/jpeg", "image/jpg"]
+
+
+def test_api_cached_pdf_download(test_client, sample_onion_image):
+    """Tests GET /api/report/pdf/{lot_id} downloading official ReportLab PDF."""
+    _, img_encoded = cv2.imencode(".jpg", sample_onion_image)
+    file_bytes = img_encoded.tobytes()
+
+    # Upload first to populate cache
+    upload_resp = test_client.post(
+        "/api/upload",
+        files={"file": ("test_onion.jpg", io.BytesIO(file_bytes), "image/jpeg")},
+        data={"lot_id": "DOCA-PDF-007"},
+    )
+    assert upload_resp.status_code == 200
+
+    # Fetch cached PDF
+    pdf_resp = test_client.get("/api/report/pdf/DOCA-PDF-007")
+    assert pdf_resp.status_code == 200
+    assert pdf_resp.headers["content-type"] == "application/pdf"
+    assert "inspection_certificate_DOCA-PDF-007.pdf" in pdf_resp.headers["content-disposition"]
+    assert pdf_resp.content.startswith(b"%PDF-")
+    assert len(pdf_resp.content) > 10000
+
+    # Non-existent lot
+    missing_resp = test_client.get("/api/report/pdf/NON_EXISTENT_LOT_9999")
+    assert missing_resp.status_code == 404

@@ -94,6 +94,7 @@ class GradingPipeline:
         center_id: str = "NAFED-Nashik-01",
         focal_length_px: Optional[float] = None,
         conf_threshold: float = 0.25,
+        custom_px_per_mm: Optional[float] = None,
     ) -> Tuple[LotReportSummary, np.ndarray]:
         """Runs end-to-end quality assessment on a single image.
         
@@ -173,6 +174,16 @@ class GradingPipeline:
             exif_focal_px=focal_length_px,
             detected_onion_pixel_diameters=raw_pixel_diameters,
         )
+
+        if not calib_metadata.card_detected and custom_px_per_mm and custom_px_per_mm > 0:
+            px_per_mm = float(custom_px_per_mm)
+            calib_metadata = CalibrationMetadata(
+                mode=CalibrationMode.ASSUMED_SCALE,
+                scale_source="custom_user_calibration",
+                mm_reliable=True,
+                card_detected=False,
+                pixels_per_mm=round(float(custom_px_per_mm), 2),
+            )
 
         # 4. Step 4: Process Each Onion (Defect Classification + Rule Evaluation)
         for idx, item in enumerate(raw_onion_data):

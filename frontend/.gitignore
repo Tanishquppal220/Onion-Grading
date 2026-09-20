@@ -1,0 +1,12 @@
+# Node & build
+node_modules/
+dist/
+dist-ssr/
+
+# Environment & local
+*.local
+.env.local
+
+# Editor & OS
+.DS_Store
+Thumbs.db

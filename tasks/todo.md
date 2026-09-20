@@ -73,5 +73,29 @@
 - [x] **Verification & Integration Tests (`training/tests/test_pipeline.py`):**
   - [x] 18/18 pytest tests passing across math, rule engine, pipeline, PDF, and REST API endpoints
 
+---
+
+## Phase 4: Frontend & Backend Full Integration
+- [x] **Frontend Architecture & Setup (`frontend/`):**
+  - [x] React 19 / Vite / TailwindCSS scaffolding with Lucide icons and shadcn UI primitives
+  - [x] Node 26 compatibility via `.npmrc` (`allow-remote=all`) and `.env` (`VITE_API_URL`)
+  - [x] Dependencies installed and verified clean build (`npm run build` in 592ms)
+- [x] **Live Camera & UX:**
+  - [x] Viewfinder HUD with sampling tray alignment reticle (`LiveCameraModal`)
+  - [x] Native rear-camera integration and flashlight torch toggle
+  - [x] Preset demo trays (27 bulbs, commercial crate, sprouted sample)
+  - [x] Procurement metadata capture (Lot ID, Farmer Name, APMC Mandi Center, Declared Weight)
+- [x] **Calibration Settings Integration:**
+  - [x] Added OpenCV ArUco 50mm optical card mode with 3D tilt compensation (`CalibrationSettingsModal`)
+  - [x] Manual fallback options: ₹10 coin (25mm), standard tray (300mm), and custom mm/px
+- [x] **Backend API Contract Matching (`backend/main.py`):**
+  - [x] Added `/api/health` endpoint alias for seamless `useBackendStatus` detection
+  - [x] Added `POST /api/upload` matching `UploadResponse` schema with quality and size categorizations
+  - [x] Mounted `runs/uploads/` at `/uploads/` for raw and annotated visual side-by-side comparison
+  - [x] Added `GET /api/report/pdf/{lot_id}` for 1-click official ReportLab A4 certificate downloading
+- [x] **Verification & Integration Tests (`training/tests/test_pipeline.py`):**
+  - [x] 22/22 pytest tests passing across math, rule engine, pipeline, PDF, and all frontend REST endpoints
+
+
 
 
