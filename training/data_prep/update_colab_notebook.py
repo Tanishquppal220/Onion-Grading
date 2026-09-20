@@ -1,4 +1,4 @@
-"""Updates colab_training_and_transfer.ipynb with robust ONNX export and comprehensive run plots/graphs zipping.
+"""Updates colab_training_and_transfer.ipynb with robust Drive transfer and Cloudflare tunnel options.
 """
 
 import json
@@ -9,116 +9,106 @@ nb_path = Path(__file__).resolve().parents[1] / "notebooks" / "colab_training_an
 with open(nb_path, "r", encoding="utf-8") as f:
     nb = json.load(f)
 
-# Step 8: Safe ONNX export for both models
-step_8_src = [
-    "from ultralytics import YOLO\n",
-    "import glob\n",
-    "\n",
-    "# Ensure model1 is loaded from best weights if not already in session\n",
-    "if 'model1' not in locals() or model1 is None:\n",
-    "    m1_pts = sorted(glob.glob('/content/runs/model1/**/weights/best.pt', recursive=True))\n",
-    "    if m1_pts:\n",
-    "        model1 = YOLO(m1_pts[-1])\n",
-    "        print(f\"Loaded Model 1 from: {m1_pts[-1]}\")\n",
-    "\n",
-    "# Ensure model2 is loaded from best weights if not already in session\n",
-    "if 'model2' not in locals() or model2 is None:\n",
-    "    m2_pts = sorted(glob.glob('/content/runs/model2/**/weights/best.pt', recursive=True))\n",
-    "    if m2_pts:\n",
-    "        model2 = YOLO(m2_pts[-1])\n",
-    "        print(f\"Loaded Model 2 from: {m2_pts[-1]}\")\n",
-    "\n",
-    "# Export Model 1 (detection + segmentation) with dynamic shape for mobile resolution flexibility\n",
-    "onnx_m1 = model1.export(format=\"onnx\", dynamic=True)\n",
-    "# Export Model 2 (defect classifier) at fixed 224x224\n",
-    "onnx_m2 = model2.export(format=\"onnx\", imgsz=224)\n",
-    "\n",
-    "print(f\"\\n Exported Model 1 ONNX: {onnx_m1}\")\n",
-    "print(f\" Exported Model 2 ONNX: {onnx_m2}\")\n"
+# Update Cell 19 Markdown
+cell_19_src = [
+    "### Step 10: Copy Artifacts to Google Drive (Or Download Directly)\n",
+    "If Drive is mounted, this saves the zip to `MyDrive/onion_grading_runs/onion_model_artifacts.zip`.\n"
 ]
 
-# Step 9: Package weights + ONNX + all training curves, confusion matrices, CSVs, and entire runs directory
-step_9_src = [
+# Update Cell 20 Code: Resilient Drive copy
+cell_20_src = [
     "import os\n",
-    "import glob\n",
     "import shutil\n",
-    "import subprocess\n",
     "\n",
-    "# 1. Organize exports directory\n",
-    "os.makedirs(\"/content/exports/weights\", exist_ok=True)\n",
-    "os.makedirs(\"/content/exports/onnx\", exist_ok=True)\n",
-    "os.makedirs(\"/content/exports/eval_plots\", exist_ok=True)\n",
-    "os.makedirs(\"/content/exports/training_runs\", exist_ok=True)\n",
+    "drive_dest = \"/content/drive/MyDrive/onion_grading_runs\"\n",
+    "zip_src = \"/content/onion_model_artifacts.zip\"\n",
     "\n",
-    "# Copy latest best.pt for Model 1 and Model 2\n",
-    "m1_pts = sorted(glob.glob(\"/content/runs/model1/**/weights/best.pt\", recursive=True), key=os.path.getmtime)\n",
-    "m2_pts = sorted(glob.glob(\"/content/runs/model2/**/weights/best.pt\", recursive=True), key=os.path.getmtime)\n",
-    "\n",
-    "if m1_pts:\n",
-    "    shutil.copy(m1_pts[-1], \"/content/exports/weights/model1_yolov8_seg.pt\")\n",
-    "    print(f\" Copied Model 1 weights from: {m1_pts[-1]}\")\n",
-    "if m2_pts:\n",
-    "    shutil.copy(m2_pts[-1], \"/content/exports/weights/model2_defect_cls.pt\")\n",
-    "    print(f\" Copied Model 2 weights from: {m2_pts[-1]}\")\n",
-    "\n",
-    "# Copy exported ONNX files\n",
-    "m1_onnx = sorted(glob.glob(\"/content/runs/model1/**/weights/*.onnx\", recursive=True) + glob.glob(\"/content/*.onnx\"), key=os.path.getmtime)\n",
-    "m2_onnx = sorted(glob.glob(\"/content/runs/model2/**/weights/*.onnx\", recursive=True), key=os.path.getmtime)\n",
-    "\n",
-    "for f in m1_onnx:\n",
-    "    if \"seg\" in f.lower() or \"best\" in f.lower():\n",
-    "        shutil.copy(f, \"/content/exports/onnx/model1_yolov8_seg.onnx\")\n",
-    "        print(f\" Copied Model 1 ONNX: {f}\")\n",
-    "        break\n",
-    "for f in m2_onnx:\n",
-    "    shutil.copy(f, \"/content/exports/onnx/model2_defect_cls.onnx\")\n",
-    "    print(f\" Copied Model 2 ONNX: {f}\")\n",
-    "    break\n",
-    "\n",
-    "# Copy all training evaluation plots, loss curves, confusion matrices, and metrics CSVs\n",
-    "plots_copied = 0\n",
-    "for ext in [\"*.png\", \"*.jpg\", \"*.csv\", \"*.yaml\"]:\n",
-    "    for p in glob.glob(f\"/content/runs/**/{ext}\", recursive=True):\n",
-    "        dest_name = os.path.basename(p)\n",
-    "        parent_tag = os.path.basename(os.path.dirname(p))\n",
-    "        shutil.copy(p, f\"/content/exports/eval_plots/{parent_tag}_{dest_name}\")\n",
-    "        plots_copied += 1\n",
-    "print(f\" Bundled {plots_copied} training plots, loss curves, confusion matrices, and metrics CSVs into eval_plots.\")\n",
-    "\n",
-    "# Copy the entire runs directory structure so all raw subfolders and logs are preserved\n",
-    "!cp -r /content/runs /content/exports/training_runs/\n",
-    "\n",
-    "# 2. Zip archive containing /content/exports (weights, onnx, eval_plots, and training_runs)\n",
-    "archive_path = \"/content/onion_model_artifacts.zip\"\n",
-    "!zip -r {archive_path} /content/exports\n",
-    "\n",
-    "# 3. Programmatic CLI Download via transfer.sh\n",
-    "print(\"\\nUploading complete package (weights + ONNX + all plots & graphs) to transfer.sh...\")\n",
-    "res = subprocess.run(f\"curl --upload-file {archive_path} https://transfer.sh/onion_model_artifacts.zip\", shell=True, capture_output=True, text=True)\n",
-    "url = res.stdout.strip()\n",
-    "\n",
-    "print(\"\\n\" + \"=\"*80)\n",
-    "print(\" TRAINING COMPLETE! DOWNLOAD ALL ARTIFACTS TO YOUR PC WITH THIS COMMAND:\")\n",
-    "print(\"=\"*80)\n",
-    "print(f\"\\nmkdir -p ~/Projects/Onion_grading_new/runs && curl -o ~/Projects/Onion_grading_new/runs/onion_model_artifacts.zip {url} && unzip -o ~/Projects/Onion_grading_new/runs/onion_model_artifacts.zip -d ~/Projects/Onion_grading_new/runs/\\n\")\n",
-    "print(\"=\"*80)\n"
+    "if os.path.exists(\"/content/drive/MyDrive\"):\n",
+    "    os.makedirs(drive_dest, exist_ok=True)\n",
+    "    shutil.copy(zip_src, f\"{drive_dest}/onion_model_artifacts.zip\")\n",
+    "    print(\"=\"*80)\n",
+    "    print(f\" SUCCESS! Artifacts copied to Google Drive at:\")\n",
+    "    print(f\" {drive_dest}/onion_model_artifacts.zip\")\n",
+    "    print(\"=\"*80)\n",
+    "else:\n",
+    "    print(\"=\"*80)\n",
+    "    print(\" Google Drive is not mounted yet.\")\n",
+    "    print(\" To mount Drive in 5 seconds:\")\n",
+    "    print(\" 1. Open your browser tab where Colab is running.\")\n",
+    "    print(\" 2. In the left panel, click the Folder icon -> click the 'Mount Drive' button (folder with Drive logo).\")\n",
+    "    print(\" 3. Click 'Connect to Google Drive' on the popup.\")\n",
+    "    print(\" 4. Re-run this cell to immediately copy the file into your Drive!\")\n",
+    "    print(\"=\"*80)\n"
 ]
 
-for cell in nb["cells"]:
-    if cell.get("cell_type") == "code":
-        src = "".join(cell.get("source", []))
-        if "onnx_m1 = model1.export" in src:
-            cell["source"] = step_8_src
-            cell["outputs"] = []
-            cell["execution_count"] = None
-            print("Step 8 updated with resilient ONNX export.")
-        elif "transfer.sh" in src or "archive_path =" in src:
-            cell["source"] = step_9_src
-            cell["outputs"] = []
-            cell["execution_count"] = None
-            print("Step 9 updated with full runs and graphs archiving.")
+# Optional Cell 21 & 22: Cloudflare tunnel for direct terminal download
+cell_21_md = {
+    "cell_type": "markdown",
+    "metadata": {},
+    "source": [
+        "### (Alternative) Direct Download via Cloudflare Tunnel (No Browser / No Drive needed)\n",
+        "Generates a direct, secure HTTPS link to download `onion_model_artifacts.zip` straight from Colab into your PC terminal.\n"
+    ]
+}
+
+cell_22_code = {
+    "cell_type": "code",
+    "execution_count": None,
+    "metadata": {},
+    "outputs": [],
+    "source": [
+        "import os\n",
+        "import subprocess\n",
+        "import threading\n",
+        "import http.server\n",
+        "import socketserver\n",
+        "\n",
+        "# 1. Install static cloudflared binary\n",
+        "!curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && chmod +x /usr/local/bin/cloudflared\n",
+        "\n",
+        "# 2. Start quiet local HTTP server on port 8080\n",
+        "!fuser -k 8080/tcp 2>/dev/null || true\n",
+        "os.chdir(\"/content\")\n",
+        "class QuietHandler(http.server.SimpleHTTPRequestHandler):\n",
+        "    def log_message(self, format, *args): pass\n",
+        "\n",
+        "server = socketserver.TCPServer((\"\", 8080), QuietHandler)\n",
+        "threading.Thread(target=server.serve_forever, daemon=True).start()\n",
+        "\n",
+        "# 3. Start Cloudflare tunnel\n",
+        "p = subprocess.Popen([\"cloudflared\", \"tunnel\", \"--url\", \"http://localhost:8080\"], stderr=subprocess.PIPE, text=True)\n",
+        "tunnel_url = None\n",
+        "for line in p.stderr:\n",
+        "    if \"trycloudflare.com\" in line:\n",
+        "        for part in line.split():\n",
+        "            if \"trycloudflare.com\" in part and part.startswith(\"http\"):\n",
+        "                tunnel_url = part.strip()\n",
+        "                break\n",
+        "        if tunnel_url: break\n",
+        "\n",
+        "print(\"\\n\" + \"=\"*80)\n",
+        "print(\" DIRECT DOWNLOAD LINK ACTIVE:\")\n",
+        "print(f\" {tunnel_url}/onion_model_artifacts.zip\")\n",
+        "print(\"=\"*80)\n",
+        "print(f\"\\nRun this command in your PC terminal to download:\\n\")\n",
+        "print(f\"mkdir -p ~/Projects/Onion_grading_new/runs && curl -o ~/Projects/Onion_grading_new/runs/onion_model_artifacts.zip {tunnel_url}/onion_model_artifacts.zip && unzip -o ~/Projects/Onion_grading_new/runs/onion_model_artifacts.zip -d ~/Projects/Onion_grading_new/runs/\\n\")\n"
+    ]
+}
+
+# Apply to notebook
+nb["cells"][19]["source"] = cell_19_src
+nb["cells"][20]["source"] = cell_20_src
+nb["cells"][20]["outputs"] = []
+nb["cells"][20]["execution_count"] = None
+
+# If tunnel cells not present, append them
+has_tunnel = any("cloudflared" in "".join(c.get("source", [])) for c in nb["cells"])
+if not has_tunnel:
+    nb["cells"].append(cell_21_md)
+    nb["cells"].append(cell_22_code)
+    print("Added Cloudflare tunnel direct download cells.")
 
 with open(nb_path, "w", encoding="utf-8") as f:
     json.dump(nb, f, indent=1)
 
-print("Notebook updated successfully!")
+print("Notebook updated successfully with Drive copy and Cloudflare tunnel options!")
