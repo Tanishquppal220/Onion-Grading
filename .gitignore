@@ -1,0 +1,36 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Project Data (raw and processed images/weights are ignored from git)
+data/raw/*
+!data/raw/.gitkeep
+data/model1/*
+!data/model1/.gitkeep
+data/model2/*
+!data/model2/.gitkeep
+data/synthetic_calibration/*
+!data/synthetic_calibration/.gitkeep
+runs/
+*.pt
+*.onnx
+*.tflite
+*.engine
+*.tar.gz
+*.zip
+
+# VS Code & Notebooks
+.vscode/
+.ipynb_checkpoints/
+
+# Operating System
+.DS_Store
+Thumbs.db
