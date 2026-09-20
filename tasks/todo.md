@@ -40,12 +40,13 @@
   - [x] Evaluated on D1-A test set: **96.3% Mask mAP@0.5** (DoD target: ≥ 85% PASSED)
   - [x] Cross-source evaluated on D1-B: 70.5% Recall (depressed precision due to 4,656 unannotated background images)
   - [x] Weights saved: `runs/model1/yolov8_seg_onion/weights/best.pt`
-- [ ] **Model 2 (YOLOv8n-cls Defect Classifier - 4 Classes):**
+- [x] **Model 2 (YOLOv8n-cls Defect Classifier - 4 Classes):**
   - [x] Resolved defect dataset bottleneck: switched to `veg1-hcqsf-2` (rotten, sprout, healthy) + `project_onion` (damaged, rotten, healthy)
-  - [ ] Extract defect crops across all 4 classes (`healthy`, `sprouted`, `rotten`, `mechanical_damage`)
-  - [ ] Train YOLOv8n-cls (25 epochs, `batch=64`, `cache="ram"`, `patience=5`)
-  - [ ] Verify test F1 score across all 4 defect classes
+  - [x] Extract defect crops across all 4 classes (2,669 crops total: healthy: 500, sprouted: 536, rotten: 1,396, mechanical_damage: 237)
+  - [x] Train YOLOv8n-cls (25 epochs, `batch=64`, `cache="ram"`, `patience=5`)
+  - [x] Verify test accuracy across defect classes: **93.8% Top-1 Test Accuracy** (DoD target: ≥ 90% PASSED)
 - [ ] **Export & Transfer:**
-  - [ ] Export Model 1 and Model 2 to ONNX
-  - [ ] Execute `transfer.sh` 1-line curl command to unpack weights into local `runs/`
+  - [ ] Export Model 1 and Model 2 to ONNX (Step 8)
+  - [ ] Execute `transfer.sh` 1-line curl command to unpack weights, ONNX, and all run plots/graphs into local `runs/` (Step 9)
+
 
