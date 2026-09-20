@@ -31,3 +31,21 @@
 - [x] Calibration math verified on synthetic renders (15 benchmark scenes generated)
 - [x] Notebook verified for VS Code Colab execution with working data transfer cell
 - [x] Documentation updated in `Second Brain/` and ready for Phase 2 model training
+
+---
+
+## Phase 2: Model Training & Evaluation
+- [x] **Model 1 (YOLOv8n-seg Onion Segmentation):**
+  - [x] Trained on D1-A with `cache="ram"`, `batch=32`, `patience=5`
+  - [x] Evaluated on D1-A test set: **96.3% Mask mAP@0.5** (DoD target: ≥ 85% PASSED)
+  - [x] Cross-source evaluated on D1-B: 70.5% Recall (depressed precision due to 4,656 unannotated background images)
+  - [x] Weights saved: `runs/model1/yolov8_seg_onion/weights/best.pt`
+- [ ] **Model 2 (YOLOv8n-cls Defect Classifier - 4 Classes):**
+  - [x] Resolved defect dataset bottleneck: switched to `veg1-hcqsf-2` (rotten, sprout, healthy) + `project_onion` (damaged, rotten, healthy)
+  - [ ] Extract defect crops across all 4 classes (`healthy`, `sprouted`, `rotten`, `mechanical_damage`)
+  - [ ] Train YOLOv8n-cls (25 epochs, `batch=64`, `cache="ram"`, `patience=5`)
+  - [ ] Verify test F1 score across all 4 defect classes
+- [ ] **Export & Transfer:**
+  - [ ] Export Model 1 and Model 2 to ONNX
+  - [ ] Execute `transfer.sh` 1-line curl command to unpack weights into local `runs/`
+
