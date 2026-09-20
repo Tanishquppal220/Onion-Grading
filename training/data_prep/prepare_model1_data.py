@@ -74,6 +74,29 @@ def sanitize_and_copy_split(
     return processed_count
 
 
+def resolve_onion_class_indices(raw_dir: Path | str) -> list[int]:
+    """Reads data.yaml from raw dataset directory and finds class indices corresponding to onion."""
+    yaml_p = Path(raw_dir) / "data.yaml"
+    if not yaml_p.exists():
+        return [0]
+    with open(yaml_p, "r") as f:
+        cfg = yaml.safe_load(f)
+    names = cfg.get("names", [])
+    if isinstance(names, dict):
+        matches = [
+            idx for idx, name in names.items()
+            if "not" not in str(name).lower() and "onion" in str(name).lower()
+        ]
+        return matches if matches else [0]
+    elif isinstance(names, list):
+        matches = [
+            idx for idx, name in enumerate(names)
+            if "not" not in str(name).lower() and "onion" in str(name).lower()
+        ]
+        return matches if matches else [0]
+    return [0]
+
+
 def build_model1_dataset(
     d1a_raw_dir: Path | str,
     d1b_raw_dir: Path | str | None,
@@ -83,6 +106,10 @@ def build_model1_dataset(
     d1a = Path(d1a_raw_dir)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+
+    # Resolve onion class index for D1-A
+    d1a_target_classes = resolve_onion_class_indices(d1a)
+    print(f"D1-A resolved onion class indices: {d1a_target_classes}")
 
     # 1. Process D1-A train and val splits
     for split in ["train", "valid", "val"]:
@@ -96,27 +123,33 @@ def build_model1_dataset(
             src_labels_dir=src_split / "labels",
             dst_images_dir=out / dst_split_name / "images",
             dst_labels_dir=out / dst_split_name / "labels",
+            target_class_indices=d1a_target_classes,
         )
 
     # 2. Process D1-B as cross-source test set if provided
     if d1b_raw_dir:
         d1b = Path(d1b_raw_dir)
+        d1b_target_classes = resolve_onion_class_indices(d1b)
+        print(f"D1-B resolved onion class indices: {d1b_target_classes}")
         print(f"Processing D1-B as cross-source benchmark -> test split...")
+        
         # Check if D1-B has test/ or valid/ or flat images
         d1b_test_img = d1b / "test" / "images"
         d1b_test_lbl = d1b / "test" / "labels"
+        if not d1b_test_img.exists():
+            d1b_test_img = d1b / "valid" / "images"
+            d1b_test_lbl = d1b / "valid" / "labels"
         if not d1b_test_img.exists():
             d1b_test_img = d1b / "train" / "images"
             d1b_test_lbl = d1b / "train" / "labels"
 
         if d1b_test_img.exists():
-            # In D1-B, class 0 is Onion, class 1 is Not Onion -> target [0]
             sanitize_and_copy_split(
                 src_images_dir=d1b_test_img,
                 src_labels_dir=d1b_test_lbl,
                 dst_images_dir=out / "test" / "images",
                 dst_labels_dir=out / "test" / "labels",
-                target_class_indices=[0],
+                target_class_indices=d1b_target_classes,
             )
 
     # 3. Write data.yaml
