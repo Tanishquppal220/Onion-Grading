@@ -45,8 +45,33 @@
   - [x] Extract defect crops across all 4 classes (2,669 crops total: healthy: 500, sprouted: 536, rotten: 1,396, mechanical_damage: 237)
   - [x] Train YOLOv8n-cls (25 epochs, `batch=64`, `cache="ram"`, `patience=5`)
   - [x] Verify test accuracy across defect classes: **93.8% Top-1 Test Accuracy** (DoD target: ≥ 90% PASSED)
-- [ ] **Export & Transfer:**
-  - [ ] Export Model 1 and Model 2 to ONNX (Step 8)
-  - [ ] Execute `transfer.sh` 1-line curl command to unpack weights, ONNX, and all run plots/graphs into local `runs/` (Step 9)
+- [x] **Export & Transfer:**
+  - [x] Export Model 1 and Model 2 to ONNX (dynamic batching, fp32)
+  - [x] Transferred weights, ONNX, and evaluation plots to local project (`runs/weights/`, `runs/onnx/`, `runs/eval_plots/`)
+
+---
+
+## Phase 3: Backend API Service & Audit PDF Generation
+- [x] **Core Pipeline (`backend/pipeline.py`):**
+  - [x] Orchestrate ArUco calibration, YOLOv8n-seg segmentation, and YOLOv8n-cls defect classification
+  - [x] Implement Lab/HSV surface discolouration thresholding
+  - [x] Height-above-plane focal compensation & geometric diameter extraction
+  - [x] Regulatory grading via rule engine (`training/common/rule_engine.py`)
+  - [x] Visual annotations and color-coded bounding contours rendering
+- [x] **PDF Audit Generator (`backend/pdf_generator.py`):**
+  - [x] Official A4 ReportLab inspection certificate template
+  - [x] Calibration verification banner (optical ArUco vs fallback prior warning)
+  - [x] KPI cards (total bulbs, DoCA Grade-A %, defect rate, lot weight, mean diameter)
+  - [x] Visual inspection overlay photo embedding
+  - [x] Detailed bulb audit log table & regulatory sign-off box
+- [x] **FastAPI REST Service (`backend/main.py`):**
+  - [x] Lifespan management for model loading
+  - [x] `GET /health` & `GET /api/v1/health` diagnostic endpoints
+  - [x] `POST /api/v1/grade/image` for instant lot assessment and base64 overlay
+  - [x] `POST /api/v1/grade/report/pdf` for streaming downloadable PDF inspection certificates
+  - [x] `GET /api/v1/eval-plots` and `GET /api/v1/eval-plots/{plot_name}` for training graphs
+- [x] **Verification & Integration Tests (`training/tests/test_pipeline.py`):**
+  - [x] 18/18 pytest tests passing across math, rule engine, pipeline, PDF, and REST API endpoints
+
 
 
