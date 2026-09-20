@@ -90,6 +90,48 @@ def crop_bulb(
     return cv2.resize(crop, target_size, interpolation=cv2.INTER_AREA)
 
 
+def find_label_file(img_path: Path) -> Path | None:
+    """Finds YOLO format label file in same dir, sibling labels/ dir, or replacing /images/ with /labels/."""
+    # 1. Same directory
+    lbl = img_path.with_suffix(".txt")
+    if lbl.exists():
+        return lbl
+
+    # 2. Path replacing /images/ with /labels/
+    parts = list(img_path.parts)
+    if "images" in parts:
+        idx = len(parts) - 1 - parts[::-1].index("images")
+        parts[idx] = "labels"
+        lbl = Path(*parts).with_suffix(".txt")
+        if lbl.exists():
+            return lbl
+
+    # 3. Sibling labels folder
+    lbl = img_path.parent.parent / "labels" / f"{img_path.stem}.txt"
+    if lbl.exists():
+        return lbl
+
+    return None
+
+
+def map_defect_class(raw_name: str) -> str | None:
+    """Maps 22 raw classes to the 4 core classes: healthy, sprouted, rotten, mechanical_damage."""
+    name = str(raw_name).strip().lower()
+    
+    # Priority: Rot > Sprout > Mechanical Damage
+    if "rot" in name:
+        return "rotten"
+    if "sprout" in name or "root" in name:
+        return "sprouted"
+    if "cut" in name or "damage" in name:
+        return "mechanical_damage"
+    if "healthy" in name or name == "onion":
+        return "healthy"
+        
+    return None
+
+
+
 def build_model2_dataset(
     d2a_raw_dir: Path | str,
     output_dir: Path | str,
@@ -99,10 +141,24 @@ def build_model2_dataset(
     seed: int = 42,
 ) -> dict[str, int]:
     """Crops and categorizes D2-A into data/model2/{train,val,test}/{healthy,sprouted,rotten,mechanical_damage}."""
+    import yaml
     random.seed(seed)
     src = Path(d2a_raw_dir)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+
+    # Automatically read class names from data.yaml if not passed
+    names = class_names
+    if not names:
+        yaml_p = src / "data.yaml"
+        if yaml_p.exists():
+            with open(yaml_p) as f:
+                cfg = yaml.safe_load(f)
+            raw_n = cfg.get("names", [])
+            if isinstance(raw_n, dict):
+                names = [raw_n[k] for k in sorted(raw_n.keys())]
+            elif isinstance(raw_n, list):
+                names = raw_n
 
     # Standard 4 classes
     target_classes = ["healthy", "sprouted", "rotten", "mechanical_damage"]
@@ -119,8 +175,8 @@ def build_model2_dataset(
     print(f"Scanning {len(images)} images in {src} for defect crops...")
 
     for img_p in images:
-        lbl_p = img_p.with_suffix(".txt")
-        if not lbl_p.exists():
+        lbl_p = find_label_file(img_p)
+        if not lbl_p or not lbl_p.exists():
             continue
 
         img = cv2.imread(str(img_p))
@@ -136,10 +192,10 @@ def build_model2_dataset(
                 continue
 
             raw_cls_id = int(parts[0])
-            raw_cls_name = class_names[raw_cls_id] if class_names and raw_cls_id < len(class_names) else str(raw_cls_id)
+            raw_cls_name = names[raw_cls_id] if names and raw_cls_id < len(names) else str(raw_cls_id)
 
             # Check mapping
-            target_cls = CLASS_MAPPING.get(raw_cls_name)
+            target_cls = map_defect_class(raw_cls_name)
             if not target_cls:
                 skipped_count += 1
                 continue
