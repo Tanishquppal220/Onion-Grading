@@ -474,7 +474,7 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
                 <span className="size-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
                 <span className="text-xs font-bold text-foreground">Grade A Pass</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">18 Bulbs • 50mm Card</span>
+              <span className="text-[10px] text-muted-foreground">6 Bulbs • 50mm Card</span>
             </button>
             <button
               type="button"
@@ -485,7 +485,7 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
                 <span className="size-2 rounded-full bg-rose-500 group-hover:scale-125 transition-transform" />
                 <span className="text-xs font-bold text-foreground">Defect Reject</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">Rotten &amp; Sprouted</span>
+              <span className="text-[10px] text-muted-foreground">15 Bulbs • Sprout &amp; Rot</span>
             </button>
             <button
               type="button"
@@ -494,9 +494,9 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
             >
               <div className="flex items-center gap-1.5 mb-1">
                 <span className="size-2 rounded-full bg-primary group-hover:scale-125 transition-transform" />
-                <span className="text-xs font-bold text-foreground">36-Bulb Crate</span>
+                <span className="text-xs font-bold text-foreground">34-Bulb Crate</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">Multi-Bulb Sizing</span>
+              <span className="text-[10px] text-muted-foreground">High-Density Sorting</span>
             </button>
             <button
               type="button"

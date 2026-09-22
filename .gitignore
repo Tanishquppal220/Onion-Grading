@@ -34,3 +34,6 @@ runs/
 # Operating System
 .DS_Store
 Thumbs.db
+
+.agents/
+scratch/

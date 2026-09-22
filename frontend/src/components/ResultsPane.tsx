@@ -6,7 +6,6 @@ import {
   Ruler,
   Layers,
   CheckCircle2,
-  Share2,
   AlertTriangle,
   Camera,
   Eye,
@@ -114,32 +113,6 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
     grading: data,
   }
 
-  const handleShareWhatsApp = () => {
-    const lotId = reportPayload.lot_metadata.lot_id
-    const farmer = reportPayload.lot_metadata.farmer_name
-    const mandi = reportPayload.lot_metadata.mandi_location
-    const grade = decision.grade
-    const soundBulbs = healthyPct
-    const decisionText = decision.recommendation
-    const totalBulbs = total
-
-    const message = `🌾 *DoCA APMC Onion Quality Inspection Certificate* 🌾
-━━━━━━━━━━━━━━━━━━━━
-📦 *Lot ID*: ${lotId}
-👤 *Farmer*: ${farmer}
-📍 *Mandi*: ${mandi}
-🔢 *Sample Size*: ${totalBulbs} Bulbs
-🏷️ *Official Grade*: *${grade}*
-✅ *Sound Bulb Share*: ${soundBulbs}% (DoCA Target ≥ 85%)
-📊 *Defects*: Rotten: ${rottenPct}%, Sprouted: ${sproutedPct}%, Damaged: ${damagedPct}%, Undersized: ${smallPct}%
-🎯 *Procurement Verdict*: ${decisionText}
-━━━━━━━━━━━━━━━━━━━━
-_Digitally verified via DoCA AI Grading System (SIH26031)_`
-
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`
-    window.open(url, "_blank")
-  }
-
   return (
     <>
       <div className="space-y-6">
@@ -184,16 +157,6 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleShareWhatsApp}
-                  disabled={isInvalidSample}
-                  className="h-9 text-xs gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold cursor-pointer"
-                >
-                  <Share2 className="size-3.5" />
-                  <span className="hidden sm:inline">WhatsApp</span>
-                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -637,15 +600,6 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleShareWhatsApp}
-                className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold cursor-pointer"
-              >
-                <Share2 className="size-3.5" />
-                <span>Share WhatsApp</span>
-              </Button>
               <Button
                 size="sm"
                 onClick={() => setIsReportOpen(true)}

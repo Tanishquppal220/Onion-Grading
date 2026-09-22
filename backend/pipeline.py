@@ -236,16 +236,32 @@ class GradingPipeline:
             if crop.size > 0:
                 crop_resized = cv2.resize(crop, (224, 224), interpolation=cv2.INTER_AREA)
                 cls_out = self.model2.predict(crop_resized, device=self.device, verbose=False)
-                top1_idx = cls_out[0].probs.top1
-                pred_label = self.model2.names[top1_idx].lower()
+                probs = cls_out[0].probs
+
+                # Model 2 class order: {0: 'healthy', 1: 'mechanical_damage', 2: 'rotten', 3: 'sprouted'}
+                p_healthy = float(probs.data[0]) if len(probs.data) > 0 else 1.0
+                p_damage = float(probs.data[1]) if len(probs.data) > 1 else 0.0
+                p_rotten = float(probs.data[2]) if len(probs.data) > 2 else 0.0
+                p_sprouted = float(probs.data[3]) if len(probs.data) > 3 else 0.0
+
+                # Calibrated confidence gating with CIELAB colorimetry verification:
+                # - Sprouting requires clear vegetative shoot emergence (p_sprouted >= 0.65)
+                # - Rot requires either high neural confidence (p_rotten >= 0.70)
+                #   OR moderate confidence (>= 0.45) corroborated by surface blemish (defect_pct >= 15.0%)
+                # - Mechanical cuts/bruises require high confidence or corroborated damage blemish
+                is_sprouted = p_sprouted >= 0.65
+                is_rotten = p_rotten >= 0.70 or (p_rotten >= 0.45 and defect_pct >= 15.0)
+                is_damaged = p_damage >= 0.70 or (p_damage >= 0.45 and defect_pct >= 20.0)
             else:
-                pred_label = "healthy"
+                is_sprouted = False
+                is_rotten = False
+                is_damaged = False
 
             # Set quality flags
             flags = QualityFlags(
-                sprouted=("sprout" in pred_label),
-                rotten=("rot" in pred_label),
-                severe_damage=("damag" in pred_label or "cut" in pred_label),
+                sprouted=is_sprouted,
+                rotten=is_rotten,
+                severe_damage=is_damaged,
             )
 
             # Volumetric weight estimation
