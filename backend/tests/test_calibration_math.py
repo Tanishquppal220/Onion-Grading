@@ -6,9 +6,9 @@ and fallback mode using synthetic benchmark scenes.
 
 import numpy as np
 import pytest
-from training.calibration.aruco_calibrator import ArUcoCalibrator
-from training.calibration.generate_synthetic_set import generate_synthetic_scene
-from training.common.schemas import CalibrationMode
+from app.calibration.aruco_calibrator import ArUcoCalibrator
+from app.common.schemas import CalibrationMode
+from tests.fixtures.generate_synthetic_set import generate_synthetic_scene
 
 
 def test_aruco_detection_and_scale():

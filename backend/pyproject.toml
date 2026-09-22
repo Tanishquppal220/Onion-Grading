@@ -27,5 +27,6 @@ package = false
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ["training/tests"]
+testpaths = ["tests"]
+
 

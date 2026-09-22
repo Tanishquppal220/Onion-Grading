@@ -13,12 +13,12 @@ from fastapi.testclient import TestClient
 import numpy as np
 import pytest
 
-from backend.main import app
-import backend.main as main_module
-from backend.pdf_generator import generate_lot_pdf_report
-from backend.pipeline import GradingPipeline
-from training.calibration.generate_synthetic_set import generate_synthetic_scene
-from training.common.schemas import CalibrationMode, LotReportSummary
+from app.main import app
+import app.main as main_module
+from app.pdf_generator import generate_lot_pdf_report
+from app.pipeline import GradingPipeline
+from app.common.schemas import CalibrationMode, LotReportSummary
+from tests.fixtures.generate_synthetic_set import generate_synthetic_scene
 
 
 @pytest.fixture(scope="module")

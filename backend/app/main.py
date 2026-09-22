@@ -24,12 +24,24 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from backend.pdf_generator import generate_lot_pdf_report
-from backend.pipeline import GradingPipeline
-from training.common.schemas import LotReportSummary
+from .common.schemas import LotReportSummary
+from .pdf_generator import generate_lot_pdf_report
+from .pipeline import GradingPipeline
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+
+def _resolve_asset_path(rel_path: str | Path) -> Path:
+    p = Path(rel_path)
+    if not p.is_absolute():
+        candidate = BACKEND_DIR / p
+        if candidate.exists() or candidate.parent.exists():
+            return candidate
+    return p
+
 
 # Directories setup
-UPLOADS_DIR = Path("runs/uploads")
+UPLOADS_DIR = _resolve_asset_path("runs/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # In-memory inspection cache for 1-click PDF download by lot ID
@@ -42,8 +54,8 @@ pipeline: GradingPipeline | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pipeline
-    seg_weights = Path("runs/weights/model1_yolov8_seg.pt")
-    cls_weights = Path("runs/weights/model2_defect_cls.pt")
+    seg_weights = _resolve_asset_path("runs/weights/model1_yolov8_seg.pt")
+    cls_weights = _resolve_asset_path("runs/weights/model2_defect_cls.pt")
     if pipeline is None and seg_weights.exists() and cls_weights.exists():
         pipeline = GradingPipeline(
             seg_model_path=seg_weights,
@@ -492,7 +504,7 @@ async def generate_pdf_report(
 @app.get("/api/v1/eval-plots", tags=["Diagnostics"])
 def list_eval_plots():
     """Lists all available model evaluation plots and curves."""
-    eval_dir = Path("runs/eval_plots")
+    eval_dir = _resolve_asset_path("runs/eval_plots")
     if not eval_dir.exists():
         return {"plots": []}
 
@@ -504,7 +516,7 @@ def list_eval_plots():
 def get_eval_plot(plot_name: str):
     """Serves a specific model evaluation plot or training curve."""
     safe_name = Path(plot_name).name
-    file_path = Path("runs/eval_plots") / safe_name
+    file_path = _resolve_asset_path("runs/eval_plots") / safe_name
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Evaluation plot not found.")
     return FileResponse(file_path)

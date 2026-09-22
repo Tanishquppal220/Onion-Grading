@@ -5,14 +5,14 @@ weight estimation, and lot aggregation compliance statements.
 """
 
 import pytest
-from training.common.schemas import (
+from app.common.schemas import (
     CalibrationMetadata,
     CalibrationMode,
     OnionMeasurements,
     OnionRecord,
     QualityFlags,
 )
-from training.common.rule_engine import (
+from app.common.rule_engine import (
     estimate_weight_grams,
     evaluate_onion_grades,
     summarize_lot,

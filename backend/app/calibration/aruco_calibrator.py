@@ -11,7 +11,7 @@ import math
 from typing import Optional, Tuple
 import cv2
 import numpy as np
-from training.common.schemas import CalibrationMetadata, CalibrationMode
+from ..common.schemas import CalibrationMetadata, CalibrationMode
 
 
 # Default reference marker parameters

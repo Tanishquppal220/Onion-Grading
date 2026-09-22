@@ -3,13 +3,15 @@
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+# Add backend root to sys.path
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BACKEND_DIR.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 import cv2
-from backend.pipeline import GradingPipeline
-from training.common.schemas import CalibrationMode
+from app.pipeline import GradingPipeline
+from app.common.schemas import CalibrationMode
 
 def main():
     pipeline = GradingPipeline(
@@ -19,15 +21,14 @@ def main():
     )
 
     demo_images = [
-        ("Preset 1: Calibrated DoCA Pass", "frontend/public/samples/demo_calibrated_doca_pass.jpg"),
-        ("Preset 2: Defective Lot Reject", "frontend/public/samples/demo_defective_lot_reject.jpg"),
-        ("Preset 3: 36-Bulb Commercial Crate", "frontend/public/samples/demo_commercial_crate_36bulbs.jpg"),
-        ("Preset 4: Uncalibrated Warning Scene", "frontend/public/samples/demo_uncalibrated_warning.jpg"),
+        ("Preset 1: Calibrated DoCA Pass", REPO_ROOT / "frontend/public/samples/demo_calibrated_doca_pass.jpg"),
+        ("Preset 2: Defective Lot Reject", REPO_ROOT / "frontend/public/samples/demo_defective_lot_reject.jpg"),
+        ("Preset 3: 36-Bulb Commercial Crate", REPO_ROOT / "frontend/public/samples/demo_commercial_crate_36bulbs.jpg"),
+        ("Preset 4: Uncalibrated Warning Scene", REPO_ROOT / "frontend/public/samples/demo_uncalibrated_warning.jpg"),
     ]
 
     print("\n=================== DEMO IMAGE SUITE PIPELINE VERIFICATION ===================")
-    for label, path_str in demo_images:
-        path = Path(path_str)
+    for label, path in demo_images:
         assert path.exists(), f"Image not found: {path}"
         img = cv2.imread(str(path))
         assert img is not None, f"Failed to read: {path}"

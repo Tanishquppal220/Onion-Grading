@@ -1,5 +1,6 @@
 # Virtual Environments
 .venv/
+backend/.venv/
 venv/
 ENV/
 
@@ -11,15 +12,17 @@ __pycache__/
 .pytest_cache/
 
 # Project Data (raw and processed images/weights are ignored from git)
-data/raw/*
-!data/raw/.gitkeep
-data/model1/*
-!data/model1/.gitkeep
-data/model2/*
-!data/model2/.gitkeep
-data/synthetic_calibration/*
-!data/synthetic_calibration/.gitkeep
+data/
+backend/data/raw/*
+!backend/data/raw/.gitkeep
+backend/data/model1/*
+!backend/data/model1/.gitkeep
+backend/data/model2/*
+!backend/data/model2/.gitkeep
+backend/data/synthetic_calibration/*
+!backend/data/synthetic_calibration/.gitkeep
 runs/
+backend/runs/
 *.pt
 *.onnx
 *.tflite
@@ -37,3 +40,4 @@ Thumbs.db
 
 .agents/
 scratch/
+backend/scratch/

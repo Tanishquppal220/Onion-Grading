@@ -2,26 +2,37 @@
 
 Handheld AI-based onion quality grading system for procurement centers (NAFED/NCCF) and export compliance.
 
-## Project Structure
-- `data/`: Raw downloads, YOLOv8-seg formatted data, defect crops, synthetic calibration test cases, and manifests.
-- `training/`:
-  - `data_prep/`: Downloader scripts, inspection tools, pHash cross-source deduplication, manifest builder.
-  - `calibration/`: OpenCV ArUco detector (`DICT_4X4_50`), homography tilt correction, and camera focal height correction.
-  - `common/`: Pydantic data schemas, multi-standard deterministic rule engine (DoCA 45–65mm + AGMARK + FSSAI defect tolerances).
-  - `notebooks/`: VS Code Google Colab training notebook with programmatic data & weight download cells.
-- `backend/`: FastAPI service endpoints (Phase 3).
-- `tasks/`: Implementation plan (`plan.md`) and task checklist (`todo.md`).
+## Monorepo Architecture
+- **`backend/`**: Complete self-contained Python backend & ML subsystem.
+  - `app/`: Application package (`app.main`, `app.pipeline`, `app.pdf_generator`, `app.calibration`, `app.common`).
+  - `tests/`: Automated unit & integration tests (`test_calibration_math.py`, `test_pipeline.py`, `test_rule_engine.py`) and synthetic fixtures.
+  - `runs/weights/`: Trained YOLOv8 segmentation and defect classification model weights.
+  - `training/`: Canonical Google Colab GPU training workbook.
+  - `scripts/`: Diagnostic and evaluation scripts (`test_demo_images.py`).
+  - `pyproject.toml` & `uv.lock`: Dependency definitions.
+- **`frontend/`**: Vite + React + TypeScript web application with Tailwind CSS and Live Viewfinder HUD.
 
-## Setup with `uv`
+## Development Setup
+
+### Backend (Python 3.12 + `uv`)
 ```bash
-# Create Python 3.12 virtual environment
-uv venv --python 3.12
-
-# Sync dependencies
+cd backend
 uv sync
+
+# Run backend tests
+uv run pytest tests/ -v
+
+# Run backend API server
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Running Tests
+### Frontend (Node.js + React)
 ```bash
-uv run pytest training/tests/ -v
+cd frontend
+npm install
+
+# Run frontend development server
+npm run dev
 ```
+
+

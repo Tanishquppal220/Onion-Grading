@@ -26,7 +26,7 @@ from reportlab.platypus import (
 )
 
 if TYPE_CHECKING:
-    from training.common.schemas import LotReportSummary
+    from .common.schemas import LotReportSummary
 
 
 def generate_lot_pdf_report(

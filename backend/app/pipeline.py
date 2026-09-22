@@ -20,9 +20,11 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-from training.calibration.aruco_calibrator import ArUcoCalibrator
-from training.common.rule_engine import estimate_weight_grams, evaluate_onion_grades, summarize_lot
-from training.common.schemas import (
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+from .calibration.aruco_calibrator import ArUcoCalibrator
+from .common.rule_engine import estimate_weight_grams, evaluate_onion_grades, summarize_lot
+from .common.schemas import (
     CalibrationMetadata,
     CalibrationMode,
     GradesResult,
@@ -40,8 +42,21 @@ class GradingPipeline:
         cls_model_path: str | Path = "runs/weights/model2_defect_cls.pt",
         device: str = "cpu",
     ):
-        self.seg_model_path = Path(seg_model_path)
-        self.cls_model_path = Path(cls_model_path)
+        seg_p = Path(seg_model_path)
+        cls_p = Path(cls_model_path)
+
+        if not seg_p.is_absolute() and not seg_p.exists():
+            candidate = BACKEND_DIR / seg_p
+            if candidate.exists():
+                seg_p = candidate
+
+        if not cls_p.is_absolute() and not cls_p.exists():
+            candidate = BACKEND_DIR / cls_p
+            if candidate.exists():
+                cls_p = candidate
+
+        self.seg_model_path = seg_p
+        self.cls_model_path = cls_p
         self.device = device
 
         if not self.seg_model_path.exists():
