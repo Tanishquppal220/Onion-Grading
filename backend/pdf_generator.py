@@ -100,10 +100,17 @@ def generate_lot_pdf_report(
 
     # 2. Calibration Banner
     if summary.calibration.mm_reliable:
-        calib_text = f"<b>CALIBRATION VERIFIED:</b> In-frame ArUco marker detected ({summary.calibration.pixels_per_mm:.1f} px/mm, camera tilt: {summary.calibration.tilt_degrees:.1f}°). True metric millimeters verified."
-        calib_color = colors.HexColor("#C6F6D5")
-        calib_border = colors.HexColor("#38A169")
-        txt_color = colors.HexColor("#22543D")
+        if summary.calibration.card_detected:
+            calib_text = f"<b>CALIBRATION VERIFIED (In-Frame ArUco):</b> Reference marker detected ({summary.calibration.pixels_per_mm:.1f} px/mm, camera tilt: {summary.calibration.tilt_degrees or 0.0:.1f}°). True metric millimeters verified."
+            calib_color = colors.HexColor("#C6F6D5")
+            calib_border = colors.HexColor("#38A169")
+            txt_color = colors.HexColor("#22543D")
+        else:
+            ppi_val = round(summary.calibration.pixels_per_mm * 25.4, 1)
+            calib_text = f"<b>DEVICE PROFILE CALIBRATED (Session Burner Reference):</b> Verified scale ({summary.calibration.pixels_per_mm:.2f} px/mm, {ppi_val} PPI). True metric millimeters verified without in-frame card."
+            calib_color = colors.HexColor("#EBF8FF")
+            calib_border = colors.HexColor("#3182CE")
+            txt_color = colors.HexColor("#2A4365")
     else:
         calib_text = "<b>WARNING — UNCALIBRATED LOT:</b> No optical reference marker detected. Measurements derived from 55 mm median bulb prior. Indicative estimates only."
         calib_color = colors.HexColor("#FEEBC8")

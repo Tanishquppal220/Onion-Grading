@@ -82,7 +82,7 @@ function App() {
 								{ label: "Rotten / Decay", color: "text-red-500" },
 								{ label: "Sprouted", color: "text-yellow-500" },
 								{ label: "Damaged (Double Split)", color: "text-orange-500" },
-								{ label: "Undersized (<40mm)", color: "text-blue-400" },
+								{ label: "Undersized (<45mm)", color: "text-blue-400" },
 							].map(({ label, color }) => (
 								<Badge key={label} variant="outline" className="gap-1 text-[11px]">
 									<span className={`size-1.5 rounded-full bg-current ${color}`} />

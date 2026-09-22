@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Share2,
   AlertTriangle,
-  UserX,
   Camera,
 } from "lucide-react"
 
@@ -56,7 +55,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
 
   // Decision details
   const decision = data.decision ?? {
-    grade: rottenPct > 4 || healthyPct < 70 ? "URS (Under Rejection Standard)" : healthyPct >= 85 ? "Grade I (FAQ - Accepted)" : "Grade II (FAQ - Conditional)",
+    grade: rottenPct > 4 || healthyPct < 70 ? "Grade III (Reject - Non-compliant)" : healthyPct >= 85 ? "Grade I (FAQ - Accepted)" : "Grade II (FAQ - Conditional)",
     status: rottenPct > 4 || healthyPct < 70 ? "rejected" : healthyPct >= 85 ? "accepted" : "conditional",
     recommendation: healthyPct >= 85 ? "Accept for Central Buffer Stock" : rottenPct > 4 ? "Reject Lot - Spoilage Risk" : "Conditional Acceptance with FAQ Discount",
     summary: "Evaluated against Department of Consumer Affairs (DoCA) Fair Average Quality (FAQ) criteria.",
@@ -91,7 +90,6 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
   }
 
   const isInvalidSample = total === 0 || decision.grade.includes("Invalid") || decision.grade.includes("Inconclusive")
-  const isHumanDetected = Boolean(audit.human_detected || decision.grade.includes("Human"))
 
   // Construct full response object for the report modal
   const reportPayload: UploadResponse = {
@@ -145,8 +143,6 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
             ? "border-green-500/40 bg-gradient-to-r from-green-500/10 via-background to-background"
             : decision.status === "conditional"
             ? "border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-background"
-            : isHumanDetected
-            ? "border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-background to-background"
             : "border-red-500/40 bg-gradient-to-r from-red-500/10 via-background to-background"
         }`}>
           <div className="p-5 sm:p-6 space-y-4">
@@ -156,8 +152,6 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                   decision.status === "accepted"
                     ? "bg-green-600 text-white hover:bg-green-700"
                     : decision.status === "conditional"
-                    ? "bg-amber-600 text-white hover:bg-amber-700"
-                    : isHumanDetected
                     ? "bg-amber-600 text-white hover:bg-amber-700"
                     : "bg-red-600 text-white hover:bg-red-700"
                 }`}>
@@ -195,8 +189,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
             </div>
 
             <div className="space-y-1">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
-                {isHumanDetected && <UserX className="size-5 text-amber-500 shrink-0" />}
+              <h2 className="text-lg sm:text-xl font-bold text-foreground">
                 {decision.recommendation}
               </h2>
               <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
@@ -213,7 +206,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
               <div className="p-2 rounded-lg bg-muted/40">
                 <span className="text-[10px] uppercase font-semibold text-muted-foreground">Sample Status</span>
                 <p className={`text-base font-bold font-mono ${isInvalidSample ? "text-amber-500" : "text-green-600"}`}>
-                  {isHumanDetected ? "Human Subject" : isInvalidSample ? "Zero Bulbs" : `${healthyPct}% Sound`}
+                  {isInvalidSample ? "Zero Bulbs" : `${healthyPct}% Sound`}
                 </p>
               </div>
               <div className="p-2 rounded-lg bg-muted/40">
@@ -236,22 +229,18 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
 
         {/* ── Sampling Protocol Guidance Banner for Invalid Samples ── */}
         {isInvalidSample && (
-          <Card className={`border-2 ${isHumanDetected ? "border-amber-500/40 bg-amber-500/5" : "border-destructive/30 bg-destructive/5"}`}>
+          <Card className="border-2 border-destructive/30 bg-destructive/5">
             <CardContent className="p-4 sm:p-5 space-y-3">
               <div className="flex items-start gap-3">
-                <div className={`p-2 rounded-lg shrink-0 ${isHumanDetected ? "bg-amber-500/15 text-amber-600" : "bg-destructive/15 text-destructive"}`}>
-                  {isHumanDetected ? <UserX className="size-5" /> : <AlertTriangle className="size-5" />}
+                <div className="p-2 rounded-lg shrink-0 bg-destructive/15 text-destructive">
+                  <AlertTriangle className="size-5" />
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-sm sm:text-base font-bold text-foreground">
-                    {isHumanDetected
-                      ? "Out-of-Domain Guard Active: Human Subject Suppressed"
-                      : "No Onion Bulbs Localized in Sample Frame"}
+                    No Onion Bulbs Localized in Sample Frame
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                    {isHumanDetected
-                      ? "The system localized human facial keypoints in the camera frame. All spurious onion candidate boxes were automatically suppressed to safeguard APMC procurement records."
-                      : "The computer vision model did not find onion bulbs in this image. Please ensure sufficient illumination and appropriate camera angle."}
+                    The computer vision model did not find onion bulbs in this image. Please ensure sufficient illumination, non-reflective background, and appropriate camera angle.
                   </p>
                 </div>
               </div>
@@ -264,8 +253,8 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1">
                   <li>Spread onion sample in a <strong>single non-overlapping layer</strong> on a flat tray or clean sheet.</li>
                   <li>Hold camera perpendicularly (~40–50 cm) directly above the bulbs.</li>
-                  <li>Ensure only onion produce is within the camera viewfinder (no people, faces, or indoor furniture).</li>
-                  <li>Check that lighting is uniform with minimal heavy shadows.</li>
+                  <li>Ensure produce is well-illuminated and within the camera viewfinder.</li>
+                  <li>Pre-calibrate device scale or place 50mm ArUco card in frame for certified millimeter sizing.</li>
                 </ul>
               </div>
             </CardContent>
@@ -305,10 +294,8 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
               <div className="flex items-center gap-1.5">
                 <span className={`size-2 rounded-full ${isInvalidSample ? "bg-amber-500" : "bg-green-500"}`} />
                 <span>
-                  {isHumanDetected
-                    ? "Pose Guard active: Human facial keypoints suppressed"
-                    : isInvalidSample
-                    ? "No physical bulbs localized"
+                  {isInvalidSample
+                    ? "No physical bulbs localized in frame"
                     : "Single detection per physical bulb (0 double-counts)"}
                 </span>
               </div>
@@ -373,7 +360,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                           ) : healthyPct >= 70 ? (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Warning (Grade II)</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (URS)</Badge>
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (Reject)</Badge>
                           )}
                         </td>
                       </tr>
@@ -386,14 +373,14 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                         </td>
                         <td className="px-3.5 py-2.5 font-mono">{rottenCount}</td>
                         <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{rottenPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 2% Max (URS &gt;4%)</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 2% Max (Reject &gt;4%)</td>
                         <td className="px-3.5 py-2.5 text-right">
                           {rottenPct <= 2.0 ? (
                             <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
                           ) : rottenPct <= 4.0 ? (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                           )}
                         </td>
                       </tr>
@@ -406,14 +393,14 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                         </td>
                         <td className="px-3.5 py-2.5 font-mono">{sproutedCount}</td>
                         <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{sproutedPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 3% Max (URS &gt;7%)</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 3% Max (Reject &gt;7%)</td>
                         <td className="px-3.5 py-2.5 text-right">
                           {sproutedPct <= 3.0 ? (
                             <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
                           ) : sproutedPct <= 7.0 ? (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                           )}
                         </td>
                       </tr>
@@ -426,34 +413,34 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                         </td>
                         <td className="px-3.5 py-2.5 font-mono">{damagedCount}</td>
                         <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{damagedPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (Reject &gt;10%)</td>
                         <td className="px-3.5 py-2.5 text-right">
                           {damagedPct <= 5.0 ? (
                             <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
                           ) : damagedPct <= 10.0 ? (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                           )}
                         </td>
                       </tr>
 
-                      {/* Undersized (<40mm) */}
+                      {/* Undersized (<45mm) */}
                       <tr>
                         <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
                           <span className="size-2.5 rounded-full bg-blue-400 shrink-0" />
-                          <span>Undersized <span className="text-[10px] text-muted-foreground">(&lt; 40 mm)</span></span>
+                          <span>Undersized <span className="text-[10px] text-muted-foreground">(&lt; 45 mm)</span></span>
                         </td>
                         <td className="px-3.5 py-2.5 font-mono">{smallCount}</td>
                         <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{smallPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (URS &gt;10%)</td>
+                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (Reject &gt;10%)</td>
                         <td className="px-3.5 py-2.5 text-right">
                           {smallPct <= 5.0 ? (
                             <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
                           ) : smallPct <= 10.0 ? (
                             <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded</Badge>
+                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                           )}
                         </td>
                       </tr>
@@ -491,7 +478,16 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                   Bulb equatorial diameter distribution
                 </CardDescription>
               </div>
-              <Badge variant="secondary" className="text-[11px] gap-1 font-mono">
+              <Badge
+                variant="secondary"
+                className={`text-[11px] gap-1 font-mono ${
+                  calibration.label.includes("Burner") || calibration.label.includes("Profile")
+                    ? "border-cyan-500/40 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10"
+                    : calibration.is_calibrated
+                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
+                    : ""
+                }`}
+              >
                 <Ruler className="size-3 text-primary" />
                 {calibration.label}
               </Badge>
@@ -507,17 +503,17 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
               <>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-3 rounded-xl border border-border bg-muted/20">
-                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Large (&gt; 70 mm)</span>
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Large (&gt; 65 mm)</span>
                     <p className="text-xl font-bold font-mono text-foreground mt-1">{largeCount}</p>
                     <p className="text-[10px] text-muted-foreground">{largePct}% of lot</p>
                   </div>
                   <div className="p-3 rounded-xl border border-primary/40 bg-primary/5">
-                    <span className="text-[10px] uppercase font-bold text-primary">Medium (40–70 mm) [FAQ Target]</span>
+                    <span className="text-[10px] uppercase font-bold text-primary">Medium (45–65 mm) [DoCA Buffer Target]</span>
                     <p className="text-xl font-bold font-mono text-primary mt-1">{mediumCount}</p>
                     <p className="text-[10px] text-primary/80 font-medium">{mediumPct}% of lot</p>
                   </div>
                   <div className="p-3 rounded-xl border border-border bg-muted/20">
-                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Small (&lt; 40 mm) [Undersized]</span>
+                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Small (&lt; 45 mm) [Undersized]</span>
                     <p className="text-xl font-bold font-mono text-foreground mt-1">{smallCount}</p>
                     <p className="text-[10px] text-muted-foreground">{smallPct}% of lot</p>
                   </div>

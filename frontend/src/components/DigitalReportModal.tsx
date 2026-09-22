@@ -298,7 +298,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                     ) : quality_percentages.healthy >= 70 ? (
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Warning (Grade II)</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (URS)</Badge>
+                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (Reject)</Badge>
                     )}
                   </td>
                 </tr>
@@ -317,7 +317,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                     ) : quality_percentages.rotten <= 4.0 ? (
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                     )}
                   </td>
                 </tr>
@@ -336,7 +336,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                     ) : quality_percentages.sprouted <= 7.0 ? (
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                     )}
                   </td>
                 </tr>
@@ -355,7 +355,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                     ) : quality_percentages.damaged <= 10.0 ? (
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (URS)</Badge>
+                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                     )}
                   </td>
                 </tr>
@@ -363,7 +363,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                 <tr>
                   <td className="px-3.5 py-2 font-medium flex items-center gap-1.5">
                     <span className="size-2 rounded-full bg-blue-400" />
-                    Undersized (&lt; 40 mm)
+                    Undersized (&lt; 45 mm)
                   </td>
                   <td className="px-3.5 py-2 font-mono">{size_counts.small}</td>
                   <td className="px-3.5 py-2 font-mono font-bold text-foreground">{size_percentages.small}%</td>
@@ -374,7 +374,7 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                     ) : size_percentages.small <= 10.0 ? (
                       <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
                     ) : (
-                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded</Badge>
+                      <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
                     )}
                   </td>
                 </tr>
@@ -398,17 +398,17 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
           </h3>
           <div className="grid grid-cols-3 print:grid-cols-3 gap-3 text-xs">
             <div className="p-3 rounded-xl border border-border bg-muted/20 text-center print:p-2">
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Large (&gt; 70 mm)</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Large (&gt; 65 mm)</span>
               <p className="text-lg font-bold font-mono text-foreground mt-1">{size_counts.large}</p>
               <p className="text-muted-foreground text-[10px]">{size_percentages.large}% of lot</p>
             </div>
             <div className="p-3 rounded-xl border border-primary/30 bg-primary/5 text-center print:p-2">
-              <span className="text-[10px] text-primary font-bold uppercase">Medium (40–70 mm) [FAQ Target]</span>
+              <span className="text-[10px] text-primary font-bold uppercase">Medium (45–65 mm) [DoCA Buffer Target]</span>
               <p className="text-lg font-bold font-mono text-primary mt-1">{size_counts.medium}</p>
               <p className="text-muted-foreground text-[10px]">{size_percentages.medium}% of lot</p>
             </div>
             <div className="p-3 rounded-xl border border-border bg-muted/20 text-center print:p-2">
-              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Small (&lt; 40 mm) [Undersized]</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase">Small (&lt; 45 mm) [Undersized]</span>
               <p className="text-lg font-bold font-mono text-foreground mt-1">{size_counts.small}</p>
               <p className="text-muted-foreground text-[10px]">{size_percentages.small}% of lot</p>
             </div>

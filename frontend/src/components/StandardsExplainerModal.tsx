@@ -44,7 +44,7 @@ export function StandardsExplainerModal({ isOpen, onClose }: StandardsExplainerM
                 <th className="px-4 py-3">Grading Parameter</th>
                 <th className="px-4 py-3 text-green-600 font-medium">Grade I (FAQ - Buffer)</th>
                 <th className="px-4 py-3 text-amber-600 font-medium">Grade II (Conditional)</th>
-                <th className="px-4 py-3 text-red-600 font-medium">URS (Rejection Limit)</th>
+                <th className="px-4 py-3 text-red-600 font-medium">Grade III (Rejection)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -73,15 +73,15 @@ export function StandardsExplainerModal({ isOpen, onClose }: StandardsExplainerM
                 <td className="px-4 py-2.5 text-red-600 font-semibold">&gt; 10.0% (High Shrinkage)</td>
               </tr>
               <tr>
-                <td className="px-4 py-2.5 font-medium">Undersized (&lt; 40 mm)</td>
+                <td className="px-4 py-2.5 font-medium">Undersized (&lt; 45 mm)</td>
                 <td className="px-4 py-2.5 text-green-600">≤ 5.0% Maximum</td>
                 <td className="px-4 py-2.5 text-amber-600">≤ 10.0% Maximum</td>
                 <td className="px-4 py-2.5 text-red-600 font-semibold">&gt; 10.0% (Size Deduction)</td>
               </tr>
               <tr>
-                <td className="px-4 py-2.5 font-medium">Standard Size Range</td>
+                <td className="px-4 py-2.5 font-medium">Standard Buffer Size Range</td>
                 <td className="px-4 py-2.5 text-foreground" colSpan={3}>
-                  Medium (40 mm – 70 mm) is the optimal FAQ procurement target for ventilated storage
+                  Medium (45 mm – 65 mm) is the reinstated DoCA FAQ buffer stock specification for ventilated storage
                 </td>
               </tr>
             </tbody>
@@ -126,10 +126,10 @@ export function StandardsExplainerModal({ isOpen, onClose }: StandardsExplainerM
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-red-600 text-xs">
                 <XCircle className="size-3.5" />
-                URS (Rejected)
+                Grade III (Reject)
               </div>
               <p className="text-xs text-muted-foreground">
-                Under Rejection Standard. Exceeds rot or defect limits; rejected to protect warehouse lots.
+                Non-compliant lot. Exceeds rot or defect limits; rejected to prevent post-harvest spoilage in storage.
               </p>
             </div>
           </div>

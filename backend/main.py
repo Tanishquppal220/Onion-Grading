@@ -81,6 +81,98 @@ class GradeResponse(BaseModel):
     annotated_image_base64: Optional[str] = None
 
 
+class BurnerCalibrationResponse(BaseModel):
+    success: bool
+    card_detected: bool
+    pixels_per_mm: float
+    ppi: float
+    tilt_degrees: Optional[float] = None
+    marker_size_mm: float
+    camera_distance_mm: Optional[float] = None
+    timestamp: str
+    message: str
+    annotated_marker_base64: Optional[str] = None
+    annotated_preview_base64: Optional[str] = None
+
+
+@app.post("/api/calibrate/burner", tags=["Device Calibration"])
+@app.post("/api/v1/calibrate/burner", tags=["Device Calibration"])
+async def calibrate_burner_image(
+    file: UploadFile = File(..., description="Burner image containing ArUco calibration marker"),
+    marker_size_mm: float = Form(50.0),
+):
+    """One-shot device calibration endpoint: analyzes an initial reference shot of the ArUco marker to lock device scale (px/mm) and PPI."""
+    if pipeline is None:
+        raise HTTPException(status_code=503, detail="Pipeline is not initialized.")
+
+    contents = await file.read()
+    nparr = np.frombuffer(contents, np.uint8)
+    img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+    if img_bgr is None:
+        raise HTTPException(status_code=400, detail="Invalid image file.")
+
+    found, corners, tilt_deg = pipeline.calibrator.detect_marker(img_bgr)
+    if not found or corners is None:
+        return BurnerCalibrationResponse(
+            success=False,
+            card_detected=False,
+            pixels_per_mm=0.0,
+            ppi=0.0,
+            tilt_degrees=None,
+            marker_size_mm=marker_size_mm,
+            camera_distance_mm=None,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            message="No ArUco marker detected. Place the 50mm ArUco card flat on the inspection surface.",
+            annotated_marker_base64=None,
+            annotated_preview_base64=None,
+        )
+
+    d01 = np.linalg.norm(corners[0] - corners[1])
+    d12 = np.linalg.norm(corners[1] - corners[2])
+    d23 = np.linalg.norm(corners[2] - corners[3])
+    d30 = np.linalg.norm(corners[3] - corners[0])
+    mean_marker_px = float((d01 + d12 + d23 + d30) / 4.0)
+
+    px_per_mm = round(mean_marker_px / marker_size_mm, 3)
+    ppi = round(px_per_mm * 25.4, 1)
+
+    focal_px = pipeline.calibrator.default_focal_px
+    camera_dist_mm = round(float(focal_px / px_per_mm), 1) if px_per_mm > 0 else None
+
+    # Verification overlay
+    annotated = img_bgr.copy()
+    c = corners.astype(int)
+    cv2.polylines(annotated, [c], True, (0, 255, 0), 3)
+    cv2.putText(
+        annotated,
+        f"Calibrated: {px_per_mm:.2f} px/mm ({ppi:.1f} PPI) | Tilt: {tilt_deg} deg",
+        (int(c[0][0]), max(25, int(c[0][1]) - 10)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.65,
+        (0, 255, 0),
+        2,
+        cv2.LINE_AA,
+    )
+
+    _, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    b64_overlay = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('utf-8')}"
+
+    return BurnerCalibrationResponse(
+        success=True,
+        card_detected=True,
+        pixels_per_mm=px_per_mm,
+        ppi=ppi,
+        tilt_degrees=tilt_deg,
+        marker_size_mm=marker_size_mm,
+        camera_distance_mm=camera_dist_mm,
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        message=f"Device successfully calibrated! Locked scale: {px_per_mm:.2f} px/mm ({ppi:.1f} PPI) at {camera_dist_mm} mm distance.",
+        annotated_marker_base64=b64_overlay,
+        annotated_preview_base64=b64_overlay,
+    )
+
+
 @app.get("/health", tags=["Diagnostics"])
 @app.get("/api/health", tags=["Diagnostics"])
 @app.get("/api/v1/health", tags=["Diagnostics"])
@@ -123,6 +215,7 @@ async def upload_image_frontend(
     mandi_location: str = Form("Lasalgaon APMC, Nashik"),
     lot_weight_kg: float = Form(50.0),
     calibration_mode: Optional[str] = Form(None),
+    device_calibration_scale: Optional[float] = Form(None),
     custom_mm_per_pixel: Optional[float] = Form(None),
     reference_dimension_mm: Optional[float] = Form(None),
     reference_pixels: Optional[float] = Form(None),
@@ -139,9 +232,11 @@ async def upload_image_frontend(
     if img_bgr is None:
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
 
-    # Custom scale derivation if specified by user calibration modal
+    # Device Burner / Custom scale derivation
     custom_px_per_mm = None
-    if custom_mm_per_pixel is not None and custom_mm_per_pixel > 0:
+    if device_calibration_scale is not None and device_calibration_scale > 0:
+        custom_px_per_mm = float(device_calibration_scale)
+    elif custom_mm_per_pixel is not None and custom_mm_per_pixel > 0:
         custom_px_per_mm = 1.0 / custom_mm_per_pixel
     elif reference_dimension_mm and reference_pixels and reference_dimension_mm > 0:
         custom_px_per_mm = reference_pixels / reference_dimension_mm
@@ -194,10 +289,10 @@ async def upload_image_frontend(
         else:
             healthy_count += 1
 
-        # Sizing classifications (small < 40mm, medium 40-70mm, large > 70mm)
-        if diam < 40.0:
+        # Sizing classifications (small < 45mm, medium 45-65mm, large > 65mm per DoCA buffer norm)
+        if diam < 45.0:
             small_count += 1
-        elif diam <= 70.0:
+        elif diam <= 65.0:
             medium_count += 1
         else:
             large_count += 1
@@ -224,7 +319,7 @@ async def upload_image_frontend(
         summary_str = "Could not localize onion bulbs in the uploaded frame. Please align sampling tray."
         buffer_fit = False
     elif rotten_pct > 4.0 or healthy_pct < 70.0:
-        grade_str = "URS (Under Rejection Standard)"
+        grade_str = "Grade III (Reject - Non-compliant)"
         status_str = "rejected"
         recom_str = "Reject Lot - Spoilage Risk"
         summary_str = "Exceeds permissible rot or cumulative defect tolerances under DoCA FAQ criteria."
@@ -244,10 +339,10 @@ async def upload_image_frontend(
 
     reasons = [
         f"Sound bulb proportion: {healthy_pct}% (DoCA FAQ target: ≥ 85.0%)",
-        f"Rotten / decayed rate: {rotten_pct}% (DoCA FAQ max limit: 2.0%, URS: >4.0%)",
-        f"Sprouted bulb rate: {sprouted_pct}% (DoCA FAQ max limit: 3.0%, URS: >7.0%)",
-        f"Damaged (double split) rate: {damaged_pct}% (DoCA FAQ max limit: 5.0%, URS: >10.0%)",
-        f"Undersized (<40mm) rate: {small_pct}% (DoCA FAQ max limit: 5.0%, URS: >10.0%)",
+        f"Rotten / decayed rate: {rotten_pct}% (DoCA FAQ max limit: 2.0%, Reject: >4.0%)",
+        f"Sprouted bulb rate: {sprouted_pct}% (DoCA FAQ max limit: 3.0%, Reject: >7.0%)",
+        f"Damaged (double split) rate: {damaged_pct}% (DoCA FAQ max limit: 5.0%, Reject: >10.0%)",
+        f"Undersized (<45mm) rate: {small_pct}% (DoCA FAQ max limit: 5.0%, Reject: >10.0%)",
     ]
 
     compliance_rules = [
@@ -292,27 +387,45 @@ async def upload_image_frontend(
             "description": "Maximum mechanical cuts, bruises, and double splits",
         },
         {
-            "name": "Undersized (<40mm)",
+            "name": "Undersized (<45mm)",
             "category": "Size",
             "actual_value": small_pct,
             "threshold_value": 5.0,
             "unit": "%",
             "passed": small_pct <= 5.0,
             "status": "pass" if small_pct <= 5.0 else ("warning" if small_pct <= 10.0 else "fail"),
-            "description": "Maximum undersized bulbs under 40mm",
+            "description": "Maximum undersized bulbs under 45mm",
         },
     ]
 
     calib_meta = lot_summary.calibration
     px_mm = calib_meta.pixels_per_mm or 1.57
     mm_px = round(1.0 / px_mm, 3) if px_mm > 0 else 0.635
+    is_burner = "device_burner_calibrated" in (calib_meta.scale_source or "")
+
+    if calib_meta.card_detected:
+        mode_str = "calibrated_aruco"
+        label_str = f"ArUco 50mm ({px_mm:.1f} px/mm)"
+        desc_str = f"Verified optical reference card with {calib_meta.tilt_degrees:.1f}° tilt compensation."
+    elif is_burner:
+        mode_str = "device_profile"
+        label_str = f"Device Profile ({px_mm:.2f} px/mm)"
+        desc_str = f"Locked session burner calibration ({calib_meta.scale_source}). Zero-marker mode."
+    elif calib_meta.scale_source == "custom_user_calibration":
+        mode_str = "custom"
+        label_str = f"Custom Scale ({px_mm:.2f} px/mm)"
+        desc_str = "Custom user-supplied calibration scale."
+    else:
+        mode_str = "estimated"
+        label_str = f"Estimated Scale (~{mm_px} mm/px)"
+        desc_str = "Derived from standard camera distance prior (Uncalibrated)."
 
     calib_info = {
-        "mode": "calibrated_aruco" if calib_meta.card_detected else ("custom" if calib_meta.scale_source == "custom_user_calibration" else "estimated"),
+        "mode": mode_str,
         "mm_per_pixel": mm_px,
         "is_calibrated": calib_meta.mm_reliable,
-        "label": f"ArUco 50mm ({px_mm:.1f} px/mm)" if calib_meta.card_detected else ("Custom Scale" if calib_meta.scale_source == "custom_user_calibration" else f"Estimated Scale (~{mm_px} mm/px)"),
-        "description": f"Verified optical reference card with {calib_meta.tilt_degrees:.1f}° tilt compensation." if calib_meta.card_detected else "Derived from standard camera distance prior.",
+        "label": label_str,
+        "description": desc_str,
     }
 
     audit_metrics = {

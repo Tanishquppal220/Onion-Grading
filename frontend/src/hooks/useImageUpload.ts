@@ -4,6 +4,7 @@ import type { UploadResponse } from "@/types/grading";
 
 export interface UploadOptions {
   calibration_mode?: string;
+  device_calibration_scale?: number;
   custom_mm_per_pixel?: number;
   reference_dimension_mm?: number;
   reference_pixels?: number;
@@ -25,6 +26,9 @@ export function useImageUpload() {
       const formData = new FormData();
       formData.append("file", file);
 
+      if (options?.device_calibration_scale !== undefined && options.device_calibration_scale > 0) {
+        formData.append("device_calibration_scale", options.device_calibration_scale.toString());
+      }
       if (options?.calibration_mode) {
         formData.append("calibration_mode", options.calibration_mode);
       }

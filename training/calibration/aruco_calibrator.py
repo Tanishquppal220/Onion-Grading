@@ -159,3 +159,35 @@ class ArUcoCalibrator:
             return round(apparent_mm * correction_factor, 1)
 
         return round(apparent_mm, 1)
+
+    def compensate_height_above_plane(
+        self,
+        apparent_mm: float,
+        bulb_height_above_plane_mm: Optional[float] = None,
+        focal_px: Optional[float] = None,
+        camera_distance_mm: Optional[float] = None,
+    ) -> float:
+        """Applies height-above-plane focal compensation to an apparent millimeter dimension.
+        
+        Because the bulb equator is elevated above the card plane by approximately radius r,
+        the bulb is closer to the lens by r, exaggerating its apparent size by Z / (Z - r).
+        Ref: Dataset Plan.md §6 and Technical Approach.md:
+        D_corrected = D_apparent * (1 - r / Z).
+        """
+        if apparent_mm <= 0:
+            return 0.0
+
+        f = focal_px or self.default_focal_px
+        z = camera_distance_mm
+        if z is None:
+            # Default nominal handheld working distance ~450 mm (45 cm)
+            z = 450.0
+
+        r = (bulb_height_above_plane_mm if bulb_height_above_plane_mm is not None else apparent_mm) / 2.0
+        if z > 100.0 and r < z:
+            correction_factor = 1.0 - (r / z)
+            correction_factor = max(0.85, min(1.0, correction_factor))
+            return round(apparent_mm * correction_factor, 1)
+
+        return round(apparent_mm, 1)
+

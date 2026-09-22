@@ -78,12 +78,15 @@ class GradingPipeline:
         else:
             median_color = np.median(bulb_pixels, axis=0)
 
-        # Delta E approximation (Euclidean distance in Lab)
-        diff = bulb_pixels.astype(np.float32) - median_color.astype(np.float32)
-        dist = np.sqrt(np.sum(diff ** 2, axis=1))
+        # Delta E approximation using true CIELAB scaling (L: 0-100, a,b: -128..127)
+        # Weight L at 0.4 to prevent natural lighting/shadow gradients from falsely registering as blemishes
+        delta_l = (bulb_pixels[:, 0].astype(np.float32) - median_color[0]) * (100.0 / 255.0)
+        delta_a = bulb_pixels[:, 1].astype(np.float32) - median_color[1]
+        delta_b = bulb_pixels[:, 2].astype(np.float32) - median_color[2]
+        dist = np.sqrt((0.4 * delta_l) ** 2 + delta_a ** 2 + delta_b ** 2)
 
-        # Pixels with significant color deviation (e.g. greening, blackening, rot stains)
-        discoloured_count = np.count_nonzero(dist > 28.0)
+        # Pixels with significant color deviation (e.g. greening, black rot, thrips damage: Delta E > 40.0)
+        discoloured_count = np.count_nonzero(dist > 40.0)
         pct = (discoloured_count / total_pixels) * 100.0
         return round(float(pct), 1)
 
@@ -178,11 +181,12 @@ class GradingPipeline:
         if not calib_metadata.card_detected and custom_px_per_mm and custom_px_per_mm > 0:
             px_per_mm = float(custom_px_per_mm)
             calib_metadata = CalibrationMetadata(
-                mode=CalibrationMode.ASSUMED_SCALE,
-                scale_source="custom_user_calibration",
+                mode=CalibrationMode.CALIBRATED_ARUCO,
+                scale_source=f"device_burner_calibrated_{custom_px_per_mm:.2f}px_per_mm",
                 mm_reliable=True,
                 card_detected=False,
-                pixels_per_mm=round(float(custom_px_per_mm), 2),
+                tilt_degrees=0.0,
+                pixels_per_mm=round(float(custom_px_per_mm), 3),
             )
 
         # 4. Step 4: Process Each Onion (Defect Classification + Rule Evaluation)
