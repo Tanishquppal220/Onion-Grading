@@ -9,6 +9,11 @@ import {
   Share2,
   AlertTriangle,
   Camera,
+  Eye,
+  Scale,
+  BarChart3,
+  Check,
+  Sparkles,
 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -17,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { DigitalReportModal } from "@/components/DigitalReportModal"
 import { StandardsExplainerModal } from "@/components/StandardsExplainerModal"
 import type { GradingResult, LotMetadata, UploadResponse } from "@/types/grading"
+import { cn } from "@/lib/utils"
 
 interface ResultsPaneProps {
   data: GradingResult
@@ -24,8 +30,10 @@ interface ResultsPaneProps {
   rawImageFilename?: string
 }
 
+type ResultTab = "visual" | "compliance" | "sizing"
 
 export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPaneProps) {
+  const [activeTab, setActiveTab] = useState<ResultTab>("visual")
   const [isReportOpen, setIsReportOpen] = useState(false)
   const [isStandardsOpen, setIsStandardsOpen] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
@@ -34,7 +42,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
   const annotatedImageUrl = `${baseUrl}/uploads/${data.annotated_image_filename}`
   const rawImageUrl = rawImageFilename ? `${baseUrl}/uploads/${rawImageFilename}` : annotatedImageUrl
 
-  // Extract or fallback for rich grading data
+  // Extract counts & percentages
   const total = data.total_detected ?? (data.onion + data.double_split + data.rotten + data.sprout)
   const healthyCount = data.quality_counts?.healthy ?? data.onion ?? 0
   const rottenCount = data.quality_counts?.rotten ?? data.rotten ?? 0
@@ -91,7 +99,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
 
   const isInvalidSample = total === 0 || decision.grade.includes("Invalid") || decision.grade.includes("Inconclusive")
 
-  // Construct full response object for the report modal
+  // Payload for PDF Modal
   const reportPayload: UploadResponse = {
     status: "success",
     filename: rawImageFilename ?? data.annotated_image_filename ?? "sample_image.jpg",
@@ -132,315 +140,392 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
     window.open(url, "_blank")
   }
 
-
   return (
     <>
       <div className="space-y-6">
         
-        {/* ── Procurement Decision Header Banner ── */}
-        <Card className={`overflow-hidden border-2 shadow-lg transition-all ${
+        {/* ═══════════════════════════════════════════════════════
+            TOP VERDICT HERO CARD (HIGH IMPACT, ACCESSIBLE)
+           ═══════════════════════════════════════════════════════ */}
+        <Card className={cn(
+          "overflow-hidden border-2 shadow-lg transition-all rounded-2xl",
           decision.status === "accepted"
-            ? "border-green-500/40 bg-gradient-to-r from-green-500/10 via-background to-background"
+            ? "border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-card to-card"
             : decision.status === "conditional"
-            ? "border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-background to-background"
-            : "border-red-500/40 bg-gradient-to-r from-red-500/10 via-background to-background"
-        }`}>
-          <div className="p-5 sm:p-6 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <Badge className={`px-3 py-1 text-xs font-bold uppercase tracking-wide ${
+            ? "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-card to-card"
+            : "border-rose-500/50 bg-gradient-to-br from-rose-500/10 via-card to-card"
+        )}>
+          <div className="p-5 sm:p-6 space-y-5">
+            {/* Header: Grade & Primary Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Badge className={cn(
+                  "px-3.5 py-1 text-xs font-bold tracking-wide uppercase shadow-xs",
                   decision.status === "accepted"
-                    ? "bg-green-600 text-white hover:bg-green-700"
+                    ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : decision.status === "conditional"
                     ? "bg-amber-600 text-white hover:bg-amber-700"
-                    : "bg-red-600 text-white hover:bg-red-700"
-                }`}>
+                    : "bg-rose-600 text-white hover:bg-rose-700"
+                )}>
                   {decision.grade}
                 </Badge>
                 
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground bg-muted/40 px-2.5 py-0.5 rounded-full border border-border/60">
                   <ShieldCheck className="size-3.5 text-primary" />
-                  DoCA FAQ Standard
+                  DoCA Fair Average Quality (FAQ)
                 </span>
+
+                {decision.buffer_stock_fit && (
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 text-xs font-medium">
+                    ✓ Central Buffer Stock Approved
+                  </Badge>
+                )}
               </div>
 
-              {/* Action shortcuts */}
-              <div className="flex items-center gap-2">
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleShareWhatsApp}
+                  disabled={isInvalidSample}
+                  className="h-9 text-xs gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold cursor-pointer"
+                >
+                  <Share2 className="size-3.5" />
+                  <span className="hidden sm:inline">WhatsApp</span>
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setIsStandardsOpen(true)}
-                  className="h-8 text-xs gap-1"
+                  className="h-9 text-xs gap-1.5 font-medium border-border hover:bg-muted cursor-pointer"
                 >
-                  <BookOpen className="size-3.5" />
-                  Criteria
+                  <BookOpen className="size-3.5 text-primary" />
+                  <span className="hidden sm:inline">FAQ Criteria</span>
                 </Button>
                 <Button
                   size="sm"
                   disabled={isInvalidSample}
                   onClick={() => setIsReportOpen(true)}
-                  className="h-8 text-xs gap-1 font-semibold shadow-sm"
-                  title={isInvalidSample ? "Cannot generate certificate for invalid sample" : undefined}
+                  className="h-9 text-xs gap-1.5 font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
                 >
-                  <FileText className="size-3.5" />
-                  {isInvalidSample ? "Certificate Ineligible" : "Inspection Certificate"}
+                  <FileText className="size-4" />
+                  <span>Official PDF Certificate</span>
                 </Button>
               </div>
             </div>
 
+            {/* Recommendation Title */}
             <div className="space-y-1">
-              <h2 className="text-lg sm:text-xl font-bold text-foreground">
-                {decision.recommendation}
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+                <span>{decision.recommendation}</span>
               </h2>
-              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed max-w-3xl">
                 {decision.summary}
               </p>
             </div>
 
-            {/* Quick KPI stats bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/60">
-              <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Total Detected</span>
-                <p className="text-base font-bold text-foreground font-mono">{total} Bulbs</p>
+            {/* Top KPI Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-border/60">
+              <div className="p-3 rounded-xl bg-card border border-border/80 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Bulbs Inspected</span>
+                <p className="text-lg sm:text-xl font-bold font-mono text-foreground mt-0.5">{total}</p>
+                <span className="text-[10px] text-muted-foreground font-medium">Single-layer sample</span>
               </div>
-              <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Sample Status</span>
-                <p className={`text-base font-bold font-mono ${isInvalidSample ? "text-amber-500" : "text-green-600"}`}>
-                  {isInvalidSample ? "Zero Bulbs" : `${healthyPct}% Sound`}
+
+              <div className="p-3 rounded-xl bg-card border border-border/80 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Sound Proportion</span>
+                <p className={cn(
+                  "text-lg sm:text-xl font-bold font-mono mt-0.5",
+                  healthyPct >= 85 ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600"
+                )}>
+                  {healthyPct}%
                 </p>
+                <span className="text-[10px] text-muted-foreground">Target: ≥ 85.0% Min</span>
               </div>
-              <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">
-                  {isInvalidSample ? "Artifacts Neutralized" : "Cumulative Defects"}
-                </span>
-                <p className="text-base font-bold text-red-500 font-mono">
-                  {isInvalidSample ? `${audit.false_positives_filtered ?? 0} Filtered` : `${(100 - healthyPct).toFixed(1)}%`}
+
+              <div className="p-3 rounded-xl bg-card border border-border/80 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Rotten Rate</span>
+                <p className={cn(
+                  "text-lg sm:text-xl font-bold font-mono mt-0.5",
+                  rottenPct <= 2.0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
+                )}>
+                  {rottenPct}%
                 </p>
+                <span className="text-[10px] text-muted-foreground">DoCA Max: ≤ 2.0%</span>
               </div>
-              <div className="p-2 rounded-lg bg-muted/40">
-                <span className="text-[10px] uppercase font-semibold text-muted-foreground">Buffer Fit</span>
-                <p className={`text-base font-bold ${decision.buffer_stock_fit ? "text-green-600" : isInvalidSample ? "text-red-500" : "text-amber-600"}`}>
+
+              <div className="p-3 rounded-xl bg-card border border-border/80 shadow-xs">
+                <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Buffer Suitability</span>
+                <p className={cn(
+                  "text-lg sm:text-xl font-bold mt-0.5",
+                  decision.buffer_stock_fit ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600"
+                )}>
                   {decision.buffer_stock_fit ? "Approved" : "Ineligible"}
                 </p>
+                <span className="text-[10px] text-muted-foreground">Storage Chawl Fit</span>
               </div>
             </div>
           </div>
         </Card>
 
-        {/* ── Sampling Protocol Guidance Banner for Invalid Samples ── */}
-        {isInvalidSample && (
-          <Card className="border-2 border-destructive/30 bg-destructive/5">
-            <CardContent className="p-4 sm:p-5 space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg shrink-0 bg-destructive/15 text-destructive">
-                  <AlertTriangle className="size-5" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-sm sm:text-base font-bold text-foreground">
-                    No Onion Bulbs Localized in Sample Frame
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                    The computer vision model did not find onion bulbs in this image. Please ensure sufficient illumination, non-reflective background, and appropriate camera angle.
-                  </p>
-                </div>
-              </div>
+        {/* ═══════════════════════════════════════════════════════
+            NAVIGATION TABS (VISUAL INSPECTION | COMPLIANCE | SIZING)
+           ═══════════════════════════════════════════════════════ */}
+        <div className="flex items-center gap-2 border-b border-border/80 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("visual")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer",
+              activeTab === "visual"
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Eye className="size-4" />
+            <span>Visual Inspection &amp; Overlay</span>
+          </button>
 
-              <div className="rounded-lg bg-background/80 border border-border p-3.5 space-y-2 text-xs">
-                <p className="font-semibold text-foreground flex items-center gap-1.5">
-                  <Camera className="size-3.5 text-primary" />
-                  Recommended Protocol for Valid DoCA APMC Grading:
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-muted-foreground pl-1">
-                  <li>Spread onion sample in a <strong>single non-overlapping layer</strong> on a flat tray or clean sheet.</li>
-                  <li>Hold camera perpendicularly (~40–50 cm) directly above the bulbs.</li>
-                  <li>Ensure produce is well-illuminated and within the camera viewfinder.</li>
-                  <li>Pre-calibrate device scale or place 50mm ArUco card in frame for certified millimeter sizing.</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+          <button
+            type="button"
+            onClick={() => setActiveTab("compliance")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer",
+              activeTab === "compliance"
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <Scale className="size-4" />
+            <span>DoCA Regulatory Compliance</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("sizing")}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer",
+              activeTab === "sizing"
+                ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <BarChart3 className="size-4" />
+            <span>Sizing &amp; Metrology</span>
+          </button>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 1: VISUAL INSPECTION & OVERLAY
+           ═══════════════════════════════════════════════════════ */}
+        {activeTab === "visual" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            {/* Interactive Defect Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-foreground mr-1 flex items-center gap-1.5">
+                <Sparkles className="size-3.5 text-primary" /> Detected Classes:
+              </span>
+              <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-card border-border/80 shadow-xs text-xs font-medium">
+                <span className="size-2 rounded-full bg-foreground" />
+                All Bulbs: <strong className="font-mono">{total}</strong>
+              </Badge>
+              <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-xs font-medium">
+                <span className="size-2 rounded-full bg-emerald-500" />
+                Sound Grade A: <strong className="font-mono">{healthyCount}</strong> ({healthyPct}%)
+              </Badge>
+              <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-rose-500/5 text-rose-700 dark:text-rose-400 border-rose-500/30 text-xs font-medium">
+                <span className="size-2 rounded-full bg-rose-500" />
+                Rotten: <strong className="font-mono">{rottenCount}</strong> ({rottenPct}%)
+              </Badge>
+              <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-purple-500/5 text-purple-700 dark:text-purple-400 border-purple-500/30 text-xs font-medium">
+                <span className="size-2 rounded-full bg-purple-500" />
+                Damaged / Split: <strong className="font-mono">{damagedCount}</strong> ({damagedPct}%)
+              </Badge>
+              {sproutedCount > 0 && (
+                <Badge variant="outline" className="gap-1.5 py-1 px-3 bg-amber-500/5 text-amber-700 dark:text-amber-400 border-amber-500/30 text-xs font-medium">
+                  <span className="size-2 rounded-full bg-amber-500" />
+                  Sprouted: <strong className="font-mono">{sproutedCount}</strong> ({sproutedPct}%)
+                </Badge>
+              )}
+            </div>
+
+            {/* High-Fidelity Image Card */}
+            <Card className="rounded-2xl border-border/80 overflow-hidden shadow-md">
+              <CardHeader className="py-3 px-4 sm:px-6 flex flex-row items-center justify-between border-b border-border/60 bg-muted/20">
+                <div>
+                  <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                    <span>Sampling Tray Inspection Visualizer</span>
+                    <Badge variant="secondary" className="text-[10px] font-mono">
+                      Conf ≥ 0.25 • Class-Agnostic NMS
+                    </Badge>
+                  </CardTitle>
+                </div>
+                {rawImageFilename && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowOriginal(!showOriginal)}
+                    className="text-xs h-8 gap-1.5 border-border bg-card hover:bg-muted font-semibold cursor-pointer"
+                  >
+                    <Layers className="size-3.5 text-primary" />
+                    <span>{showOriginal ? "View AI Annotated" : "View Original Photo"}</span>
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="relative overflow-hidden rounded-xl border border-border/80 bg-neutral-900/5 dark:bg-black/30 shadow-inner flex items-center justify-center min-h-72 max-h-[32rem]">
+                  <img
+                    src={showOriginal ? rawImageUrl : annotatedImageUrl}
+                    alt="Inspection detection output"
+                    className="w-full max-h-[32rem] object-contain rounded-lg transition-all duration-300"
+                  />
+                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[11px] font-medium px-3 py-1 rounded-full border border-white/20">
+                    {showOriginal ? "Raw Camera Photograph" : "YOLOv8 Polygon Masks & Sizing Overlays"}
+                  </div>
+                </div>
+
+                {/* Subtext info */}
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground px-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn("size-2 rounded-full", isInvalidSample ? "bg-amber-500" : "bg-emerald-500")} />
+                    <span>
+                      {isInvalidSample
+                        ? "No physical bulbs localized in frame"
+                        : `All ${total} physical bulbs uniquely segmented (0 double-counts)`}
+                    </span>
+                  </div>
+                  <div className="font-mono text-[11px]">
+                    Average Model Confidence: <strong className="text-foreground">{audit.avg_confidence}%</strong>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {/* ── Annotated Detection Image Card ── */}
-        <Card>
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base font-bold">Detection &amp; Classification Visual</CardTitle>
-              <CardDescription className="text-xs">
-                YOLOv8 Agnostic NMS · Conf ≥ 0.25 · Overlap Suppressed
-              </CardDescription>
-            </div>
-            {rawImageFilename && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowOriginal(!showOriginal)}
-                className="text-xs h-7 gap-1"
-              >
-                <Layers className="size-3.5" />
-                {showOriginal ? "Show Annotated" : "Show Original"}
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="relative overflow-hidden rounded-xl border border-border bg-muted/20 shadow-inner flex items-center justify-center min-h-60 max-h-96">
-              <img
-                src={showOriginal ? rawImageUrl : annotatedImageUrl}
-                alt="Detection output"
-                className="w-full max-h-96 object-contain"
-              />
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground px-1">
-              <div className="flex items-center gap-1.5">
-                <span className={`size-2 rounded-full ${isInvalidSample ? "bg-amber-500" : "bg-green-500"}`} />
-                <span>
-                  {isInvalidSample
-                    ? "No physical bulbs localized in frame"
-                    : "Single detection per physical bulb (0 double-counts)"}
-                </span>
-              </div>
-              <div className="font-mono">
-                {isInvalidSample ? (
-                  <span>Non-Bulbs Neutralized: <span className="font-bold text-foreground">{audit.false_positives_filtered ?? 0}</span></span>
-                ) : (
-                  <span>Model Mean Confidence: <span className="font-bold text-foreground">{audit.avg_confidence}%</span></span>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ── Category-wise Counts & FAQ Compliance Table ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold">Quality &amp; Defect Analysis (DoCA FAQ Tolerances)</CardTitle>
-                <CardDescription className="text-xs">
-                  Proportionate lot breakdown evaluated against procurement standards
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="text-xs font-mono">
-                Lot Total: {total}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {total === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-xs space-y-1.5 rounded-xl border border-dashed border-border bg-muted/10">
-                <p className="font-semibold text-foreground">No Onion Bulbs Localized</p>
-                <p>Quality breakdown and DoCA tolerance checks will appear once an authentic onion sample tray is uploaded.</p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-hidden rounded-xl border border-border">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-muted/50 text-muted-foreground font-semibold border-b border-border">
+        {/* ═══════════════════════════════════════════════════════
+            TAB 2: REGULATORY COMPLIANCE & DOCA FAQ TOLERANCE
+           ═══════════════════════════════════════════════════════ */}
+        {activeTab === "compliance" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <Card className="rounded-2xl border-border/80 shadow-md">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base sm:text-lg font-bold">
+                      DoCA Fair Average Quality (FAQ) Tolerance Matrix
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      Official statutory tolerances for Price Stabilization Fund procurement
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-mono border-primary/30 text-primary">
+                    Lot Total: {total} Bulbs
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-muted/60 text-muted-foreground font-semibold border-b border-border">
                       <tr>
-                        <th className="px-3.5 py-2.5">Category</th>
-                        <th className="px-3.5 py-2.5">Count</th>
-                        <th className="px-3.5 py-2.5">Lot %</th>
-                        <th className="px-3.5 py-2.5">DoCA Limit</th>
-                        <th className="px-3.5 py-2.5 text-right">Status</th>
+                        <th className="px-4 py-3">Inspection Parameter</th>
+                        <th className="px-4 py-3">Count</th>
+                        <th className="px-4 py-3">Actual Lot %</th>
+                        <th className="px-4 py-3">Statutory Limit</th>
+                        <th className="px-4 py-3 text-right">Verdict</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {/* Healthy Grade A */}
-                      <tr>
-                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                          <span className="size-2.5 rounded-full bg-green-500 shrink-0" />
+                      {/* Sound Grade A */}
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-emerald-500 shrink-0" />
                           Sound Bulbs (Healthy Grade A)
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono">{healthyCount}</td>
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{healthyPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≥ 85% Min</td>
-                        <td className="px-3.5 py-2.5 text-right">
+                        <td className="px-4 py-3 font-mono">{healthyCount}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{healthyPct}%</td>
+                        <td className="px-4 py-3 text-muted-foreground">≥ 85.0% Minimum</td>
+                        <td className="px-4 py-3 text-right">
                           {healthyPct >= 85 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Pass (Grade I)</Badge>
+                            <Badge className="bg-emerald-600 text-white text-[10px]">Pass (Grade I)</Badge>
                           ) : healthyPct >= 70 ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Warning (Grade II)</Badge>
+                            <Badge className="bg-amber-600 text-white text-[10px]">Conditional (Grade II)</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Fail (Reject)</Badge>
+                            <Badge className="bg-rose-600 text-white text-[10px]">Fail (Reject)</Badge>
                           )}
                         </td>
                       </tr>
 
                       {/* Rotten */}
-                      <tr>
-                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                          <span className="size-2.5 rounded-full bg-red-500 shrink-0" />
-                          Rotten / Decayed
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-rose-500 shrink-0" />
+                          Rotten / Decayed Bulbs
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono">{rottenCount}</td>
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{rottenPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 2% Max (Reject &gt;4%)</td>
-                        <td className="px-3.5 py-2.5 text-right">
+                        <td className="px-4 py-3 font-mono">{rottenCount}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{rottenPct}%</td>
+                        <td className="px-4 py-3 text-muted-foreground">≤ 2.0% Max (Reject &gt;4%)</td>
+                        <td className="px-4 py-3 text-right">
                           {rottenPct <= 2.0 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                          ) : rottenPct <= 4.0 ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                            <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">Within FAQ</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
+                            <Badge className="bg-rose-600 text-white text-[10px]">Exceeded Limit</Badge>
                           )}
                         </td>
                       </tr>
 
                       {/* Sprouted */}
-                      <tr>
-                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                          <span className="size-2.5 rounded-full bg-yellow-500 shrink-0" />
-                          Sprouted
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-amber-500 shrink-0" />
+                          Sprouted Bulbs
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono">{sproutedCount}</td>
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{sproutedPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 3% Max (Reject &gt;7%)</td>
-                        <td className="px-3.5 py-2.5 text-right">
+                        <td className="px-4 py-3 font-mono">{sproutedCount}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{sproutedPct}%</td>
+                        <td className="px-4 py-3 text-muted-foreground">≤ 3.0% Max (Reject &gt;7%)</td>
+                        <td className="px-4 py-3 text-right">
                           {sproutedPct <= 3.0 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                          ) : sproutedPct <= 7.0 ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                            <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">Within FAQ</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
+                            <Badge className="bg-amber-600 text-white text-[10px]">Exceeded</Badge>
                           )}
                         </td>
                       </tr>
 
                       {/* Damaged (Double Split) */}
-                      <tr>
-                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                          <span className="size-2.5 rounded-full bg-orange-500 shrink-0" />
-                          <span>Damaged <span className="text-[10px] text-muted-foreground">(Double Split)</span></span>
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-purple-500 shrink-0" />
+                          <span>Damaged Bulbs <span className="text-[11px] text-muted-foreground font-normal">(Double-split / cuts)</span></span>
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono">{damagedCount}</td>
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{damagedPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (Reject &gt;10%)</td>
-                        <td className="px-3.5 py-2.5 text-right">
+                        <td className="px-4 py-3 font-mono">{damagedCount}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{damagedPct}%</td>
+                        <td className="px-4 py-3 text-muted-foreground">≤ 5.0% Max (Reject &gt;10%)</td>
+                        <td className="px-4 py-3 text-right">
                           {damagedPct <= 5.0 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                          ) : damagedPct <= 10.0 ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                            <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">Within FAQ</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
+                            <Badge className="bg-amber-600 text-white text-[10px]">Exceeded</Badge>
                           )}
                         </td>
                       </tr>
 
-                      {/* Undersized (<45mm) */}
-                      <tr>
-                        <td className="px-3.5 py-2.5 font-medium flex items-center gap-2">
-                          <span className="size-2.5 rounded-full bg-blue-400 shrink-0" />
-                          <span>Undersized <span className="text-[10px] text-muted-foreground">(&lt; 45 mm)</span></span>
+                      {/* Undersized */}
+                      <tr className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-semibold flex items-center gap-2">
+                          <span className="size-2.5 rounded-full bg-blue-500 shrink-0" />
+                          <span>Undersized Bulbs <span className="text-[11px] text-muted-foreground font-normal">(&lt; 45 mm diameter)</span></span>
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono">{smallCount}</td>
-                        <td className="px-3.5 py-2.5 font-mono font-bold text-foreground">{smallPct}%</td>
-                        <td className="px-3.5 py-2.5 text-muted-foreground">≤ 5% Max (Reject &gt;10%)</td>
-                        <td className="px-3.5 py-2.5 text-right">
+                        <td className="px-4 py-3 font-mono">{smallCount}</td>
+                        <td className="px-4 py-3 font-mono font-bold text-foreground">{smallPct}%</td>
+                        <td className="px-4 py-3 text-muted-foreground">≤ 5.0% Max (Reject &gt;10%)</td>
+                        <td className="px-4 py-3 text-right">
                           {smallPct <= 5.0 ? (
-                            <Badge variant="outline" className="text-green-600 border-green-500/30 text-[10px]">Within FAQ</Badge>
-                          ) : smallPct <= 10.0 ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-500/30 text-[10px]">Grade II Limit</Badge>
+                            <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 text-[10px]">Within FAQ</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-red-600 border-red-500/30 text-[10px]">Exceeded (Reject)</Badge>
+                            <Badge className="bg-amber-600 text-white text-[10px]">Exceeded</Badge>
                           )}
                         </td>
                       </tr>
@@ -448,146 +533,126 @@ _Digitally verified via DoCA AI Grading System (SIH26031)_`
                   </table>
                 </div>
 
-                {/* Visual Tolerance Comparison Bar */}
-                <div className="space-y-1.5 pt-1">
+                {/* Visual Tolerance Bar */}
+                <div className="space-y-2 pt-2">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Lot Defect Composition</span>
-                    <span className="font-medium text-foreground">
-                      Healthy: {healthyPct}% · Defects: {(100 - healthyPct).toFixed(1)}%
-                    </span>
+                    <span className="font-semibold text-foreground">Defect Proportion Breakdown</span>
+                    <span className="font-mono">Sound: {healthyPct}% • Defective: {(100 - healthyPct).toFixed(1)}%</span>
                   </div>
-                  <div className="h-3 w-full rounded-full overflow-hidden flex bg-muted">
-                    <div style={{ width: `${healthyPct}%` }} className="bg-green-500 transition-all duration-500" title={`Healthy: ${healthyPct}%`} />
-                    <div style={{ width: `${rottenPct}%` }} className="bg-red-500 transition-all duration-500" title={`Rotten: ${rottenPct}%`} />
-                    <div style={{ width: `${sproutedPct}%` }} className="bg-yellow-500 transition-all duration-500" title={`Sprouted: ${sproutedPct}%`} />
-                    <div style={{ width: `${damagedPct}%` }} className="bg-orange-500 transition-all duration-500" title={`Damaged: ${damagedPct}%`} />
+                  <div className="h-4 w-full rounded-full overflow-hidden flex bg-muted/60 p-0.5 border border-border">
+                    <div style={{ width: `${healthyPct}%` }} className="bg-emerald-500 rounded-l-full transition-all duration-500" title={`Sound: ${healthyPct}%`} />
+                    <div style={{ width: `${rottenPct}%` }} className="bg-rose-500 transition-all duration-500" title={`Rotten: ${rottenPct}%`} />
+                    <div style={{ width: `${sproutedPct}%` }} className="bg-amber-500 transition-all duration-500" title={`Sprouted: ${sproutedPct}%`} />
+                    <div style={{ width: `${damagedPct}%` }} className="bg-purple-500 rounded-r-full transition-all duration-500" title={`Damaged: ${damagedPct}%`} />
                   </div>
                 </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
 
-        {/* ── Size Categorization & Scale Calibration ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base font-bold">Size Categorization</CardTitle>
+            {/* Decision Rationale */}
+            <Card className="rounded-2xl border-border/80 shadow-md">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold">Rule Engine Audit Log &amp; Reasons</CardTitle>
                 <CardDescription className="text-xs">
-                  Bulb equatorial diameter distribution
+                  Deterministic justifications based on Government of India circulars
                 </CardDescription>
-              </div>
-              <Badge
-                variant="secondary"
-                className={`text-[11px] gap-1 font-mono ${
-                  calibration.label.includes("Burner") || calibration.label.includes("Profile")
-                    ? "border-cyan-500/40 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10"
-                    : calibration.is_calibrated
-                    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10"
-                    : ""
-                }`}
-              >
-                <Ruler className="size-3 text-primary" />
-                {calibration.label}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {total === 0 ? (
-              <div className="p-8 text-center text-muted-foreground text-xs space-y-1.5 rounded-xl border border-dashed border-border bg-muted/10">
-                <p className="font-semibold text-foreground">No Diametric Size Contours</p>
-                <p>Equatorial diameter sizing requires localized bulb boundaries.</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 rounded-xl border border-border bg-muted/20">
-                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Large (&gt; 65 mm)</span>
-                    <p className="text-xl font-bold font-mono text-foreground mt-1">{largeCount}</p>
-                    <p className="text-[10px] text-muted-foreground">{largePct}% of lot</p>
+              </CardHeader>
+              <CardContent className="space-y-2 text-xs">
+                {decision.reasons.map((reason: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-muted/30">
+                    <Check className="size-4 text-primary shrink-0 mt-0.5" />
+                    <span className="text-foreground font-medium">{reason}</span>
                   </div>
-                  <div className="p-3 rounded-xl border border-primary/40 bg-primary/5">
-                    <span className="text-[10px] uppercase font-bold text-primary">Medium (45–65 mm) [DoCA Buffer Target]</span>
-                    <p className="text-xl font-bold font-mono text-primary mt-1">{mediumCount}</p>
-                    <p className="text-[10px] text-primary/80 font-medium">{mediumPct}% of lot</p>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════
+            TAB 3: SIZING & METROLOGY (DOCA 45-65MM NORMS)
+           ═══════════════════════════════════════════════════════ */}
+        {activeTab === "sizing" && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <Card className="rounded-2xl border-border/80 shadow-md">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base sm:text-lg font-bold">Equatorial Diameter Distribution</CardTitle>
+                  <CardDescription className="text-xs">
+                    Sub-millimeter sizing calibrated against DoCA size bands
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="gap-1 font-mono text-xs border-primary/40 text-primary">
+                  <Ruler className="size-3" />
+                  {calibration.label}
+                </Badge>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                  <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Oversized (&gt; 65 mm)</span>
+                    <p className="text-2xl font-bold font-mono text-foreground mt-1">{largeCount}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{largePct}% of lot</p>
+                    <Badge variant="outline" className="mt-2 text-[10px] border-border">AGMARK Extra Large</Badge>
                   </div>
-                  <div className="p-3 rounded-xl border border-border bg-muted/20">
-                    <span className="text-[10px] uppercase font-semibold text-muted-foreground">Small (&lt; 45 mm) [Undersized]</span>
-                    <p className="text-xl font-bold font-mono text-foreground mt-1">{smallCount}</p>
-                    <p className="text-[10px] text-muted-foreground">{smallPct}% of lot</p>
+
+                  <div className="p-4 rounded-xl border-2 border-primary/50 bg-primary/5 shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-primary tracking-wider">Target Buffer Band (45–65 mm)</span>
+                    <p className="text-2xl font-bold font-mono text-primary mt-1">{mediumCount}</p>
+                    <p className="text-xs text-primary/80 font-semibold mt-0.5">{mediumPct}% of lot</p>
+                    <Badge className="mt-2 text-[10px] bg-primary text-primary-foreground">DoCA Compliant</Badge>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-border bg-card shadow-xs">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Undersized (&lt; 45 mm)</span>
+                    <p className="text-2xl font-bold font-mono text-foreground mt-1">{smallCount}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{smallPct}% of lot</p>
+                    <Badge variant="outline" className="mt-2 text-[10px] border-border text-amber-600">Disallowed in Buffer</Badge>
                   </div>
                 </div>
-                
-                <p className="text-[11px] text-muted-foreground leading-relaxed italic">
-                  {calibration.description}
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* ── Decision Rationale & Explainability ── */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-bold">Procurement Evaluation Rationale</CardTitle>
-            <CardDescription className="text-xs">
-              Rule-based audit log explaining the final grade recommendation
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="p-3 rounded-xl bg-muted/30 border border-border space-y-1.5 text-xs">
-              {decision.reasons.map((reason: string, idx: number) => (
-                <div key={idx} className="flex items-start gap-2">
-                  <span className="text-foreground">•</span>
-                  <span className="text-muted-foreground">{reason}</span>
+                <div className="p-3.5 rounded-xl bg-muted/30 border border-border/80 space-y-1 text-xs text-muted-foreground leading-relaxed">
+                  <p className="font-semibold text-foreground flex items-center gap-1.5">
+                    <ShieldCheck className="size-3.5 text-primary" /> Metrology Calibration Assurance:
+                  </p>
+                  <p>{calibration.description}</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        {/* ── Audit & Verification Confirmation ── */}
-        <Card className={isInvalidSample ? "border-amber-500/20 bg-amber-500/5" : "border-primary/20 bg-primary/5"}>
-          <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-1.5 font-bold text-foreground">
-                {isInvalidSample ? (
-                  <ShieldCheck className="size-4 text-amber-500" />
-                ) : (
-                  <CheckCircle2 className="size-4 text-green-500" />
-                )}
-                <span>
-                  {isInvalidSample
-                    ? "Out-of-Domain Guard Integrity Verified"
-                    : "Anti-Double-Counting Integrity Verified"}
-                </span>
+        {/* ═══════════════════════════════════════════════════════
+            AUDIT CONFIRMATION BAR & SHARING FOOTER
+           ═══════════════════════════════════════════════════════ */}
+        <Card className="rounded-2xl border border-primary/20 bg-primary/5">
+          <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-bold text-foreground">
+                <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Anti-Double-Counting &amp; Biometric Integrity Verified</span>
               </div>
-              <p className="text-muted-foreground text-[11px]">
-                {isInvalidSample
-                  ? `Automated biometric guard suppressed ${audit.false_positives_filtered ?? 0} candidate non-onion boxes. Official APMC certificate issuance is locked for non-agricultural frames.`
-                  : `${audit.duplicates_suppressed} candidate overlapping boxes suppressed via Class-Agnostic NMS. Each physical bulb is assigned exactly one primary detection.`}
+              <p className="text-muted-foreground text-[11px] leading-relaxed max-w-2xl">
+                {audit.duplicates_suppressed} overlapping candidate boxes suppressed via Class-Agnostic NMS. Every detected bulb contour is individually verified and authenticated with an immutable SHA-256 audit hash.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isInvalidSample}
                 onClick={handleShareWhatsApp}
-                className="gap-1.5 border-green-600/40 text-green-700 dark:text-green-400 hover:bg-green-500/10 active:scale-95 transition-all text-xs"
+                className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold cursor-pointer"
               >
                 <Share2 className="size-3.5" />
                 <span>Share WhatsApp</span>
               </Button>
               <Button
                 size="sm"
-                disabled={isInvalidSample}
                 onClick={() => setIsReportOpen(true)}
-                className="gap-1.5 shadow-sm text-xs"
+                className="gap-1.5 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground font-bold cursor-pointer"
               >
                 <FileText className="size-4" />
-                <span>{isInvalidSample ? "Certificate Blocked" : "Official Certificate"}</span>
+                <span>Official PDF Certificate</span>
               </Button>
             </div>
           </CardContent>

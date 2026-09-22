@@ -52,7 +52,7 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
   const [lotId, setLotId] = useState<string>(() => `DOCA-${Math.floor(1000 + Math.random() * 9000)}`)
   const [farmerName, setFarmerName] = useState<string>("Ramesh Patil")
   const [mandiLocation, setMandiLocation] = useState<string>("Lasalgaon APMC, Nashik")
-  const [showLotSetup, setShowLotSetup] = useState<boolean>(true)
+  const [showLotSetup, setShowLotSetup] = useState<boolean>(false)
 
   // Device Calibration Profile (Burner Mode)
   const [isCalibModalOpen, setIsCalibModalOpen] = useState<boolean>(false)
@@ -191,79 +191,85 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
       />
 
       {/* ── Procurement Inspection Details & Calibration Bar ── */}
-      <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs space-y-3">
+      <div className="rounded-xl border border-border/80 bg-muted/20 p-3 text-xs space-y-2.5 transition-all">
         <div
           className="flex items-center justify-between cursor-pointer select-none"
           onClick={() => setShowLotSetup(!showLotSetup)}
         >
-          <div className="flex items-center gap-2 font-semibold text-foreground">
-            <Building2 className="size-3.5 text-primary" />
-            <span>Procurement Lot &amp; Calibration Metadata</span>
+          <div className="flex items-center gap-2 font-medium text-foreground">
+            <Building2 className="size-3.5 text-primary shrink-0" />
+            <span className="font-semibold">Lot &amp; Mandi Context</span>
+            <span className="text-muted-foreground text-[11px] hidden sm:inline">
+              ({lotId} • {mandiLocation.split(",")[0]})
+            </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Badge variant="outline" className={cn("text-[10px] font-mono", deviceProfile ? "border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10" : "")}>
-              {deviceProfile ? "Device Calibrated" : "ArUco 50mm (Auto)"}
+            <Badge variant="outline" className={cn("text-[10px] font-mono", deviceProfile ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" : "")}>
+              {deviceProfile ? "Scale Calibrated" : "ArUco 50mm Auto"}
             </Badge>
-            {showLotSetup ? <ChevronUp className="size-3.5" /> : <ChevronDown className="size-3.5" />}
+            <span className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
+              {showLotSetup ? "Hide Details" : "Edit Details"}
+              {showLotSetup ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+            </span>
           </div>
         </div>
 
         {showLotSetup && (
-          <div className="space-y-3 pt-1 border-t border-border/60 animate-in fade-in duration-200">
+          <div className="space-y-3 pt-2 border-t border-border/60 animate-in fade-in duration-200">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div>
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1 mb-1">
-                  <Hash className="size-3" /> Lot ID
+                <label className="text-[11px] text-muted-foreground flex items-center gap-1 mb-1 font-medium">
+                  <Hash className="size-3 text-primary" /> Lot Identifier
                 </label>
                 <Input
                   value={lotId}
                   onChange={(e) => setLotId(e.target.value)}
-                  className="h-7 text-xs font-mono"
+                  className="h-8 text-xs font-mono"
                   placeholder="e.g. DOCA-4082"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1 mb-1">
-                  <User className="size-3" /> Farmer / Vendor
+                <label className="text-[11px] text-muted-foreground flex items-center gap-1 mb-1 font-medium">
+                  <User className="size-3 text-primary" /> Farmer / Vendor
                 </label>
                 <Input
                   value={farmerName}
                   onChange={(e) => setFarmerName(e.target.value)}
-                  className="h-7 text-xs"
+                  className="h-8 text-xs"
                   placeholder="e.g. Ramesh Patil"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] text-muted-foreground flex items-center gap-1 mb-1">
-                  <Building2 className="size-3" /> Mandi / APMC Center
+                <label className="text-[11px] text-muted-foreground flex items-center gap-1 mb-1 font-medium">
+                  <Building2 className="size-3 text-primary" /> Mandi / APMC Center
                 </label>
                 <Input
                   value={mandiLocation}
                   onChange={(e) => setMandiLocation(e.target.value)}
-                  className="h-7 text-xs"
+                  className="h-8 text-xs"
                   placeholder="e.g. Lasalgaon APMC"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-1 border-t border-border/40 text-[11px]">
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px]">
               <span className="text-muted-foreground">
-                Scale: <span className="font-mono text-foreground font-medium">
+                Active Scale: <span className="font-mono text-foreground font-semibold">
                   {deviceProfile
                     ? `Device Calibrated: ${deviceProfile.pixels_per_mm.toFixed(2)} px/mm (${deviceProfile.ppi.toFixed(0)} PPI)`
-                    : "ArUco 50mm Optical Card (Auto-detect)"}
+                    : "ArUco 50mm Optical Card (Auto-detect in frame)"}
                 </span>
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsCalibModalOpen(true)}
-                className="h-6 text-[10px] gap-1 text-cyan-700 dark:text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/10"
+                className="h-7 text-[11px] gap-1.5 border-border hover:bg-muted font-medium"
               >
-                <Smartphone className="size-3" />
-                {deviceProfile ? "Manage Device Profile" : "Calibrate Device Scale"}
+                <Smartphone className="size-3 text-primary" />
+                {deviceProfile ? "Manage Scale Profile" : "Calibrate Camera Scale"}
               </Button>
             </div>
           </div>
@@ -327,23 +333,23 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
       )}
 
       {/* ── Mobile Field Action Bar (1-Tap Live Camera & Native Camera) ── */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         <Button
           type="button"
           onClick={() => setIsLiveCameraOpen(true)}
-          className="h-10 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs gap-1.5 shadow-md active:scale-[0.99] transition-all"
+          className="h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs sm:text-sm gap-2 rounded-xl shadow-sm active:scale-[0.99] transition-all cursor-pointer"
         >
           <Camera className="size-4" />
-          <span className="truncate">Live Viewfinder HUD</span>
+          <span>Open Live Viewfinder HUD</span>
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={() => cameraInputRef.current?.click()}
-          className="h-10 text-xs gap-1.5 border-border font-medium hover:bg-muted active:scale-[0.99] transition-all"
+          className="h-11 text-xs sm:text-sm gap-2 border-border/80 font-medium hover:bg-muted rounded-xl active:scale-[0.99] transition-all cursor-pointer"
         >
           <Smartphone className="size-4 text-primary" />
-          <span className="truncate">Device Rear Camera</span>
+          <span>Snap Photo (Phone Camera)</span>
         </Button>
       </div>
 
@@ -354,8 +360,8 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={cn(
-          "relative flex min-h-56 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition-all duration-200 select-none",
-          state === "idle" && "border-border bg-muted/10 hover:border-primary/60 hover:bg-muted/30",
+          "relative flex min-h-52 w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all duration-200 select-none",
+          state === "idle" && "border-border/80 bg-muted/10 hover:border-primary/60 hover:bg-muted/30",
           state === "dragging" && "scale-[1.01] border-primary bg-primary/5 shadow-lg shadow-primary/10",
           state === "error" && "border-destructive bg-destructive/5 cursor-default",
           state === "preview" && "cursor-default border-border/50 bg-muted/10"
@@ -366,25 +372,26 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
           <div className="flex flex-col items-center gap-2.5 px-6 py-6 text-center">
             <div
               className={cn(
-                "flex size-12 items-center justify-center rounded-full border border-border transition-colors duration-200",
+                "flex size-14 items-center justify-center rounded-2xl border border-border/80 transition-colors duration-200",
                 state === "dragging"
                   ? "border-primary bg-primary/10 text-primary"
-                  : "bg-muted text-muted-foreground"
+                  : "bg-muted/40 text-primary"
               )}
             >
-              <UploadCloud className="size-6" />
+              <UploadCloud className="size-7" />
             </div>
-            <div className="flex flex-col gap-0.5">
-              <p className="text-sm font-medium text-foreground">
-                {state === "dragging" ? "Release to upload lot sample" : "Drag & drop sample tray image here"}
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-semibold text-foreground">
+                {state === "dragging" ? "Release to drop sample tray photo" : "Drop sample tray image here or click to browse"}
               </p>
               <p className="text-xs text-muted-foreground">
-                or <span className="font-medium text-primary underline underline-offset-2">browse files</span>
+                Supports single bulbs or multi-onion procurement trays (JPG, PNG, WEBP)
               </p>
             </div>
-            <p className="text-[10px] text-muted-foreground">
-              Supports single bulb or multi-onion procurement tray (JPG, PNG, WEBP)
-            </p>
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-muted/40 px-2.5 py-1 rounded-full border border-border/40">
+              <Ruler className="size-3 text-primary" />
+              Tip: Include a 50mm ArUco card in frame for automatic millimeter calibration
+            </div>
           </div>
         )}
 
@@ -404,37 +411,37 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
         {/* Preview state */}
         {state === "preview" && file && preview && (
           <div className="flex w-full flex-col items-center gap-3 px-4 py-4">
-            <div className="relative w-full max-w-sm overflow-hidden rounded-lg border border-border shadow-md">
+            <div className="relative w-full max-w-md overflow-hidden rounded-xl border border-border/80 shadow-md">
               <img
                 src={preview}
                 alt="Selected sample tray"
-                className="h-44 w-full object-cover"
+                className="h-48 w-full object-cover"
               />
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   handleClear()
                 }}
-                className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm transition-colors hover:bg-background hover:text-destructive"
+                className="absolute right-2 top-2 flex size-7 items-center justify-center rounded-full bg-background/80 text-foreground backdrop-blur-sm transition-colors hover:bg-background hover:text-destructive cursor-pointer"
                 aria-label="Remove image"
               >
                 <X className="size-4" />
               </button>
             </div>
 
-            <div className="flex w-full max-w-sm items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <ImageIcon className="size-3.5" />
+            <div className="flex w-full max-w-md items-center gap-3 rounded-xl border border-border/80 bg-card px-3.5 py-2.5 shadow-xs">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <ImageIcon className="size-4" />
               </div>
               <div className="flex min-w-0 flex-col gap-0.5">
-                <p className="truncate text-xs font-medium text-foreground">{file.name}</p>
+                <p className="truncate text-xs font-semibold text-foreground">{file.name}</p>
                 <p className="text-[10px] text-muted-foreground">
-                  {formatBytes(file.size)} · {file.type}
+                  {formatBytes(file.size)} • {file.type.split("/")[1]?.toUpperCase() || "IMAGE"}
                 </p>
               </div>
-              <Badge variant="secondary" className="ml-auto shrink-0 gap-1 text-[10px]">
-                <CheckCircle2 className="size-3 text-green-500" />
-                Ready for AI
+              <Badge variant="secondary" className="ml-auto shrink-0 gap-1 text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                <CheckCircle2 className="size-3" />
+                Ready to Scan
               </Badge>
             </div>
           </div>
@@ -443,61 +450,65 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
 
       {/* ── Official Demo Presets Bar ── */}
       {state === "idle" && (
-        <div className="rounded-xl border border-border/80 bg-muted/30 p-3 space-y-2">
+        <div className="rounded-2xl border border-border/80 bg-muted/20 p-3.5 space-y-2.5">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-primary animate-pulse" /> Official Demo Presets:
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Sparkles className="size-3.5 text-primary" /> Instant Test Trays:
             </span>
             <a
               href="/aruco_marker_50mm.png"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-primary hover:underline flex items-center gap-1"
+              className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
             >
-              📄 Printable ArUco 50mm Card
+              📄 Printable 50mm Marker
             </a>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => loadSample("demo_calibrated_doca_pass.jpg")}
-              className="h-auto py-1.5 px-2 flex flex-col items-start text-left border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500"
+              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left shadow-xs cursor-pointer"
             >
-              <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">1. Calibrated Pass</span>
-              <span className="text-[9px] text-muted-foreground">ArUco 50mm • 100% Grade-A</span>
-            </Button>
-            <Button
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="size-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
+                <span className="text-xs font-bold text-foreground">Grade A Pass</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">18 Bulbs • 50mm Card</span>
+            </button>
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => loadSample("demo_defective_lot_reject.jpg")}
-              className="h-auto py-1.5 px-2 flex flex-col items-start text-left border-rose-500/30 hover:bg-rose-500/10 hover:border-rose-500"
+              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-rose-500 hover:bg-rose-500/5 transition-all text-left shadow-xs cursor-pointer"
             >
-              <span className="text-[11px] font-semibold text-rose-600 dark:text-rose-400">2. Defect Reject</span>
-              <span className="text-[9px] text-muted-foreground">Sprouted / Rotten / Damaged</span>
-            </Button>
-            <Button
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="size-2 rounded-full bg-rose-500 group-hover:scale-125 transition-transform" />
+                <span className="text-xs font-bold text-foreground">Defect Reject</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Rotten &amp; Sprouted</span>
+            </button>
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => loadSample("demo_commercial_crate_36bulbs.jpg")}
-              className="h-auto py-1.5 px-2 flex flex-col items-start text-left border-primary/30 hover:bg-primary/10 hover:border-primary"
+              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-primary hover:bg-primary/5 transition-all text-left shadow-xs cursor-pointer"
             >
-              <span className="text-[11px] font-semibold text-primary">3. 36-Bulb Crate</span>
-              <span className="text-[9px] text-muted-foreground">Parallel Multi-Segmentation</span>
-            </Button>
-            <Button
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="size-2 rounded-full bg-primary group-hover:scale-125 transition-transform" />
+                <span className="text-xs font-bold text-foreground">36-Bulb Crate</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">Multi-Bulb Sizing</span>
+            </button>
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => loadSample("demo_uncalibrated_warning.jpg")}
-              className="h-auto py-1.5 px-2 flex flex-col items-start text-left border-amber-500/30 hover:bg-amber-500/10 hover:border-amber-500"
+              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-amber-500 hover:bg-amber-500/5 transition-all text-left shadow-xs cursor-pointer"
             >
-              <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400">4. Fallback Mode</span>
-              <span className="text-[9px] text-muted-foreground">Uncalibrated 55mm Prior</span>
-            </Button>
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="size-2 rounded-full bg-amber-500 group-hover:scale-125 transition-transform" />
+                <span className="text-xs font-bold text-foreground">Fallback Mode</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">55mm Median Prior</span>
+            </button>
           </div>
         </div>
       )}
@@ -506,10 +517,15 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
       <Button
         size="lg"
         disabled={state !== "preview" || isUploading}
-        className="w-full gap-2 font-semibold shadow-md"
+        className={cn(
+          "w-full h-12 gap-2 text-sm font-bold shadow-md rounded-xl transition-all active:scale-[0.99]",
+          state === "preview"
+            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-primary/20 cursor-pointer"
+            : "cursor-not-allowed opacity-60"
+        )}
         onClick={handleAnalyze}
       >
-        {isUploading && <Loader2 className="size-4 animate-spin" />}
+        {isUploading && <Loader2 className="size-5 animate-spin" />}
         {isUploading
           ? "Analyzing & Grading against DoCA Standards..."
           : state === "preview"
