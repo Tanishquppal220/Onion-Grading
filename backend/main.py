@@ -2,9 +2,9 @@
 
 Provides RESTful endpoints for:
   - Frontend interactive upload & grading (/api/upload, /api/health, /uploads/)
-  - Direct PDF inspection certificate download (/api/report/pdf/{lot_id})
+  - Direct PDF inspection report download (/api/report/pdf/{lot_id})
   - Single-image quality assessment & lot grading (/api/v1/grade/image)
-  - PDF inspection certificate generation (/api/v1/grade/report/pdf)
+  - PDF inspection report generation (/api/v1/grade/report/pdf)
   - Training metrics and evaluation plots access (/api/v1/eval-plots)
   - System health and loaded model diagnostics (/health, /api/v1/health)
 """
@@ -13,11 +13,9 @@ from __future__ import annotations
 
 import base64
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-import io
-import os
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
@@ -35,10 +33,10 @@ UPLOADS_DIR = Path("runs/uploads")
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # In-memory inspection cache for 1-click PDF download by lot ID
-report_cache: Dict[str, tuple[LotReportSummary, np.ndarray]] = {}
+report_cache: dict[str, tuple[LotReportSummary, np.ndarray]] = {}
 
 # Global pipeline instance
-pipeline: Optional[GradingPipeline] = None
+pipeline: GradingPipeline | None = None
 
 
 @asynccontextmanager
@@ -58,7 +56,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Onion Quality Assessment & Grading API",
-    description="Handheld AI-based Onion Grading & Multi-Standard Regulatory Compliance Service (DoCA & AGMARK)",
+    description="Prototype AI Service for Onion Quality Grading & Regulatory Standards Assessment (DoCA & AGMARK Benchmarks)",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -78,99 +76,10 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 class GradeResponse(BaseModel):
     lot_report: LotReportSummary
-    annotated_image_base64: Optional[str] = None
+    annotated_image_base64: str | None = None
 
 
-class BurnerCalibrationResponse(BaseModel):
-    success: bool
-    card_detected: bool
-    pixels_per_mm: float
-    ppi: float
-    tilt_degrees: Optional[float] = None
-    marker_size_mm: float
-    camera_distance_mm: Optional[float] = None
-    timestamp: str
-    message: str
-    annotated_marker_base64: Optional[str] = None
-    annotated_preview_base64: Optional[str] = None
 
-
-@app.post("/api/calibrate/burner", tags=["Device Calibration"])
-@app.post("/api/v1/calibrate/burner", tags=["Device Calibration"])
-async def calibrate_burner_image(
-    file: UploadFile = File(..., description="Burner image containing ArUco calibration marker"),
-    marker_size_mm: float = Form(50.0),
-):
-    """One-shot device calibration endpoint: analyzes an initial reference shot of the ArUco marker to lock device scale (px/mm) and PPI."""
-    if pipeline is None:
-        raise HTTPException(status_code=503, detail="Pipeline is not initialized.")
-
-    contents = await file.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    if img_bgr is None:
-        raise HTTPException(status_code=400, detail="Invalid image file.")
-
-    found, corners, tilt_deg = pipeline.calibrator.detect_marker(img_bgr)
-    if not found or corners is None:
-        return BurnerCalibrationResponse(
-            success=False,
-            card_detected=False,
-            pixels_per_mm=0.0,
-            ppi=0.0,
-            tilt_degrees=None,
-            marker_size_mm=marker_size_mm,
-            camera_distance_mm=None,
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            message="No ArUco marker detected. Place the 50mm ArUco card flat on the inspection surface.",
-            annotated_marker_base64=None,
-            annotated_preview_base64=None,
-        )
-
-    d01 = np.linalg.norm(corners[0] - corners[1])
-    d12 = np.linalg.norm(corners[1] - corners[2])
-    d23 = np.linalg.norm(corners[2] - corners[3])
-    d30 = np.linalg.norm(corners[3] - corners[0])
-    mean_marker_px = float((d01 + d12 + d23 + d30) / 4.0)
-
-    px_per_mm = round(mean_marker_px / marker_size_mm, 3)
-    ppi = round(px_per_mm * 25.4, 1)
-
-    focal_px = pipeline.calibrator.default_focal_px
-    camera_dist_mm = round(float(focal_px / px_per_mm), 1) if px_per_mm > 0 else None
-
-    # Verification overlay
-    annotated = img_bgr.copy()
-    c = corners.astype(int)
-    cv2.polylines(annotated, [c], True, (0, 255, 0), 3)
-    cv2.putText(
-        annotated,
-        f"Calibrated: {px_per_mm:.2f} px/mm ({ppi:.1f} PPI) | Tilt: {tilt_deg} deg",
-        (int(c[0][0]), max(25, int(c[0][1]) - 10)),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.65,
-        (0, 255, 0),
-        2,
-        cv2.LINE_AA,
-    )
-
-    _, buf = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
-    b64_overlay = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('utf-8')}"
-
-    return BurnerCalibrationResponse(
-        success=True,
-        card_detected=True,
-        pixels_per_mm=px_per_mm,
-        ppi=ppi,
-        tilt_degrees=tilt_deg,
-        marker_size_mm=marker_size_mm,
-        camera_distance_mm=camera_dist_mm,
-        timestamp=datetime.now(timezone.utc).isoformat(),
-        message=f"Device successfully calibrated! Locked scale: {px_per_mm:.2f} px/mm ({ppi:.1f} PPI) at {camera_dist_mm} mm distance.",
-        annotated_marker_base64=b64_overlay,
-        annotated_preview_base64=b64_overlay,
-    )
 
 
 @app.get("/health", tags=["Diagnostics"])
@@ -195,7 +104,7 @@ def health_check():
             "weights": "runs/weights/model2_defect_cls.pt",
         },
         "calibration": {
-            "marker_type": "ArUco DICT_4X4_50",
+            "marker_type": "ArUco dict_4X4_50",
             "reference_size_mm": 50.0,
             "fallback_median_prior_mm": 55.0,
         },
@@ -209,19 +118,17 @@ def health_check():
 
 @app.post("/api/upload", tags=["Frontend Grading"])
 async def upload_image_frontend(
-    file: UploadFile = File(..., description="JPEG/PNG image of onions to grade"),
-    lot_id: str = Form("DOCA-001"),
+    file: UploadFile | None,
+    lot_id: str = Form("LOT-001"),
     farmer_name: str = Form("Registered Grower"),
     mandi_location: str = Form("Lasalgaon APMC, Nashik"),
     lot_weight_kg: float = Form(50.0),
-    calibration_mode: Optional[str] = Form(None),
-    device_calibration_scale: Optional[float] = Form(None),
-    custom_mm_per_pixel: Optional[float] = Form(None),
-    reference_dimension_mm: Optional[float] = Form(None),
-    reference_pixels: Optional[float] = Form(None),
+    calibration_mode: str | None = Form(None),
     conf_threshold: float = Form(0.20),
 ):
     """Processes uploaded image for the React frontend, saving images in /uploads and returning full breakdown."""
+    if not file:
+        file = File(..., description="JPEG/PNG image of onions to grade")
     if pipeline is None:
         raise HTTPException(status_code=503, detail="Grading models are not loaded.")
 
@@ -232,26 +139,16 @@ async def upload_image_frontend(
     if img_bgr is None:
         raise HTTPException(status_code=400, detail="Uploaded file is not a valid image.")
 
-    # Device Burner / Custom scale derivation
-    custom_px_per_mm = None
-    if device_calibration_scale is not None and device_calibration_scale > 0:
-        custom_px_per_mm = float(device_calibration_scale)
-    elif custom_mm_per_pixel is not None and custom_mm_per_pixel > 0:
-        custom_px_per_mm = 1.0 / custom_mm_per_pixel
-    elif reference_dimension_mm and reference_pixels and reference_dimension_mm > 0:
-        custom_px_per_mm = reference_pixels / reference_dimension_mm
-
     lot_summary, annotated_bgr = pipeline.analyze_image(
         image_bgr=img_bgr,
         lot_id=lot_id,
         center_id=mandi_location,
-        custom_px_per_mm=custom_px_per_mm,
         conf_threshold=conf_threshold,
     )
 
     # Save raw and annotated images to /uploads/
-    timestamp_slug = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-    safe_lot_id = "".join(c for c in lot_id if c.isalnum() or c in "-_") or "DOCA"
+    timestamp_slug = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    safe_lot_id = "".join(c for c in lot_id if c.isalnum() or c in "-_") or "LOT"
     raw_filename = f"raw_{safe_lot_id}_{timestamp_slug}.jpg"
     annotated_filename = f"annotated_{safe_lot_id}_{timestamp_slug}.jpg"
 
@@ -401,24 +298,15 @@ async def upload_image_frontend(
     calib_meta = lot_summary.calibration
     px_mm = calib_meta.pixels_per_mm or 1.57
     mm_px = round(1.0 / px_mm, 3) if px_mm > 0 else 0.635
-    is_burner = "device_burner_calibrated" in (calib_meta.scale_source or "")
 
     if calib_meta.card_detected:
         mode_str = "calibrated_aruco"
         label_str = f"ArUco 50mm ({px_mm:.1f} px/mm)"
-        desc_str = f"Verified optical reference card with {calib_meta.tilt_degrees:.1f}° tilt compensation."
-    elif is_burner:
-        mode_str = "device_profile"
-        label_str = f"Device Profile ({px_mm:.2f} px/mm)"
-        desc_str = f"Locked session burner calibration ({calib_meta.scale_source}). Zero-marker mode."
-    elif calib_meta.scale_source == "custom_user_calibration":
-        mode_str = "custom"
-        label_str = f"Custom Scale ({px_mm:.2f} px/mm)"
-        desc_str = "Custom user-supplied calibration scale."
+        desc_str = f"Verified in-frame optical reference card with {calib_meta.tilt_degrees:.1f}° tilt compensation."
     else:
         mode_str = "estimated"
         label_str = f"Estimated Scale (~{mm_px} mm/px)"
-        desc_str = "Derived from standard camera distance prior (Uncalibrated)."
+        desc_str = "Derived from standard 55mm median bulb prior (Uncalibrated fallback)."
 
     calib_info = {
         "mode": mode_str,
@@ -502,7 +390,7 @@ async def upload_image_frontend(
 
 @app.get("/api/report/pdf/{lot_id}", tags=["Frontend Reporting"])
 def download_cached_pdf_report(lot_id: str):
-    """Downloads an official ReportLab A4 inspection certificate for a previously graded lot."""
+    """Downloads a ReportLab A4 assessment report for a previously graded lot."""
     if lot_id not in report_cache:
         raise HTTPException(status_code=404, detail=f"No inspection report found for lot '{lot_id}'. Please grade the lot first.")
 
@@ -510,7 +398,7 @@ def download_cached_pdf_report(lot_id: str):
     pdf_bytes = generate_lot_pdf_report(summary, annotated_image_bgr=annotated_bgr)
 
     safe_lot_id = "".join(c for c in lot_id if c.isalnum() or c in "-_")
-    filename = f"inspection_certificate_{safe_lot_id}.pdf"
+    filename = f"inspection_report_{safe_lot_id}.pdf"
 
     return Response(
         content=pdf_bytes,
@@ -521,13 +409,15 @@ def download_cached_pdf_report(lot_id: str):
 
 @app.post("/api/v1/grade/image", response_model=GradeResponse, tags=["Grading"])
 async def grade_image(
-    file: UploadFile = File(..., description="JPEG/PNG image of onions with optional ArUco card"),
+    file: UploadFile | None,
     lot_id: str = Query("LOT-001", description="Lot identification code"),
-    center_id: str = Query("NAFED-Nashik-01", description="Procurement center or packhouse name"),
-    focal_length_px: Optional[float] = Query(None, description="Optional EXIF focal length in pixels"),
+    center_id: str = Query("APMC-Nashik-01", description="Procurement center or packhouse name"),
+    focal_length_px: float | None = Query(None, description="Optional EXIF focal length in pixels"),
     include_image: bool = Query(True, description="Whether to include base64 annotated image in response"),
 ):
     """Performs full AI quality assessment and multi-standard grading on an uploaded photo."""
+    if not file:
+        file = File(..., description="JPEG/PNG image of onions with optional ArUco card")
     if pipeline is None:
         raise HTTPException(status_code=503, detail="Grading models are not loaded.")
 
@@ -559,12 +449,14 @@ async def grade_image(
 
 @app.post("/api/v1/grade/report/pdf", tags=["Reporting"])
 async def generate_pdf_report(
-    file: UploadFile = File(..., description="JPEG/PNG image of onions to grade and certify"),
+    file: UploadFile | None,
     lot_id: str = Query("LOT-001", description="Lot identification code"),
-    center_id: str = Query("NAFED-Nashik-01", description="Procurement center name"),
-    focal_length_px: Optional[float] = Query(None, description="Optional EXIF focal length in pixels"),
+    center_id: str = Query("APMC-Nashik-01", description="Procurement center name"),
+    focal_length_px: float | None = Query(None, description="Optional EXIF focal length in pixels"),
 ):
-    """Performs quality assessment and generates an official downloadable PDF inspection certificate."""
+    """Performs quality assessment and generates a downloadable PDF assessment report."""
+    if not file:
+        file = File(..., description="JPEG/PNG image of onions to grade and certify")
     if pipeline is None:
         raise HTTPException(status_code=503, detail="Grading models are not loaded.")
 

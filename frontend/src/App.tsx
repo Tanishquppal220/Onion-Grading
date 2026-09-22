@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { ScanSearch, ShieldCheck, ArrowLeft, BookOpen, Sparkles } from "lucide-react"
+import { ScanSearch, FlaskConical, ArrowLeft, BookOpen, Sparkles } from "lucide-react"
 import {
 	Card,
 	CardContent,
@@ -36,11 +36,11 @@ function App() {
 									OnionGrade AI
 								</span>
 								<Badge variant="outline" className="text-[10px] font-mono border-primary/40 text-primary bg-primary/5">
-									DoCA 45–65mm FAQ
+									Research Prototype · v2.1
 								</Badge>
 							</div>
 							<span className="text-[11px] text-muted-foreground hidden sm:inline">
-								Automated Mandi Quality Assessment &amp; Buffer-Stock Clearance
+								Computer Vision Prototype for Produce Quality Assessment &amp; Sizing
 							</span>
 						</div>
 					</div>
@@ -85,14 +85,14 @@ function App() {
 						{/* Trust & Ministry Header */}
 						<div className="flex flex-col items-center gap-2.5 text-center">
 							<div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-								<ShieldCheck className="size-3.5" />
-								Government of India • Central Buffer Stock Quality Protocol
+								<FlaskConical className="size-3.5" />
+								AI Research Prototype • Mandi Produce Quality Assessment Bench
 							</div>
 							<h1 className="font-heading text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
 								Onion Quality Grading &amp; Sizing
 							</h1>
 							<p className="max-w-xl text-sm sm:text-base text-muted-foreground">
-								Fast, non-contact quality evaluation for APMC mandis. Detects equatorial diameter (mm), flags spoilage defects, and generates official tamper-resistant PDF certificates.
+								Non-contact produce quality evaluation prototype. Detects equatorial diameter (mm), flags spoilage defects, and generates inspection assessment reports based on published DoCA FAQ specifications.
 							</p>
 						</div>
 
@@ -121,7 +121,7 @@ function App() {
 									3
 								</div>
 								<div>
-									<p className="font-semibold text-foreground">Audit Certificate</p>
+									<p className="font-semibold text-foreground">Assessment Report</p>
 									<p className="text-[11px] text-muted-foreground">Instant A4 PDF report</p>
 								</div>
 							</div>
@@ -167,7 +167,7 @@ function App() {
 									))}
 								</div>
 								<p className="text-[10px] text-muted-foreground leading-relaxed">
-									* In accordance with Government of India DoCA FAQ standards, double-split bulbs with ruptured outer tunics are graded under the official damaged quota due to accelerated decay risk during cold storage.
+									* Under published DoCA FAQ specifications, double-split bulbs with ruptured outer tunics are graded within the damaged quota due to accelerated decay risk during cold storage.
 								</p>
 							</CardFooter>
 						</Card>
@@ -198,9 +198,6 @@ function App() {
 											Analyzed in {result.grading?.inference_time_ms ? `${result.grading.inference_time_ms.toFixed(0)}ms` : "Instant"}
 										</Badge>
 									</div>
-									<p className="text-[11px] text-muted-foreground">
-										{result.lot_metadata?.mandi_location || "APMC Center"} • Grower: {result.lot_metadata?.farmer_name || "Mandi Lot"}
-									</p>
 								</div>
 							</div>
 
@@ -230,7 +227,7 @@ function App() {
 			{/* ── Footer ── */}
 			<footer className="border-t border-border/60 bg-muted/20 py-6 text-center text-xs text-muted-foreground">
 				<div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-2 px-4">
-					<span>Problem Statement #26031 • Department of Consumer Affairs (DoCA) &amp; NAFED</span>
+					<span>Academic &amp; Engineering Research Prototype • Automated Produce Metrology (Benchmark: DoCA FAQ)</span>
 					<span>AI Vision Pipeline v2.1 • Sub-Millimeter ArUco Metrology</span>
 				</div>
 			</footer>

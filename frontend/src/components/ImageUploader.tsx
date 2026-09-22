@@ -10,7 +10,6 @@ import {
   Building2,
   User,
   Hash,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   Camera,
@@ -20,7 +19,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { BurnerCalibrationModal, type DeviceCalibrationProfile } from "@/components/BurnerCalibrationModal"
 import { LiveCameraModal } from "@/components/LiveCameraModal"
 import type { UploadOptions } from "@/hooks/useImageUpload"
 
@@ -49,41 +47,16 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
   const [isLiveCameraOpen, setIsLiveCameraOpen] = useState<boolean>(false)
 
   // Procurement Lot Details
-  const [lotId, setLotId] = useState<string>(() => `DOCA-${Math.floor(1000 + Math.random() * 9000)}`)
+  const [lotId, setLotId] = useState<string>(() => `LOT-${Math.floor(1000 + Math.random() * 9000)}`)
   const [farmerName, setFarmerName] = useState<string>("Ramesh Patil")
   const [mandiLocation, setMandiLocation] = useState<string>("Lasalgaon APMC, Nashik")
   const [showLotSetup, setShowLotSetup] = useState<boolean>(false)
-
-  // Device Calibration Profile (Burner Mode)
-  const [isCalibModalOpen, setIsCalibModalOpen] = useState<boolean>(false)
-  const [deviceProfile, setDeviceProfile] = useState<DeviceCalibrationProfile | null>(() => {
-    try {
-      const saved = localStorage.getItem("doca_device_calibration_profile")
-      return saved ? JSON.parse(saved) : null
-    } catch {
-      return null
-    }
-  })
-
-  const handleSaveDeviceProfile = (profile: DeviceCalibrationProfile | null) => {
-    setDeviceProfile(profile)
-    try {
-      if (profile) {
-        localStorage.setItem("doca_device_calibration_profile", JSON.stringify(profile))
-      } else {
-        localStorage.removeItem("doca_device_calibration_profile")
-      }
-    } catch (e) {
-      console.warn("Failed to persist device calibration profile", e)
-    }
-  }
 
   const handleAnalyze = async () => {
     if (!file) return
     try {
       await onUpload(file, {
-        calibration_mode: deviceProfile ? "device_profile" : "aruco_50mm",
-        device_calibration_scale: deviceProfile?.pixels_per_mm,
+        calibration_mode: "aruco_50mm",
         lot_id: lotId,
         farmer_name: farmerName,
         mandi_location: mandiLocation,
@@ -151,24 +124,6 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
     if (state !== "preview") inputRef.current?.click()
   }
 
-  // Load sample image preset
-  const loadSample = async (filename: string) => {
-    try {
-      let res = await fetch(`/samples/${filename}`)
-      if (!res.ok) {
-        const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
-        res = await fetch(`${baseUrl}/uploads/${filename}`)
-      }
-      if (!res.ok) throw new Error("Could not fetch sample")
-      const blob = await res.blob()
-      const sampleFile = new File([blob], filename, { type: "image/jpeg" })
-      acceptFile(sampleFile)
-    } catch (err) {
-      console.warn("Could not load sample directly, please upload manually:", err)
-    }
-  }
-
-
   return (
     <div className="flex flex-col gap-4">
       {/* Hidden file input */}
@@ -204,8 +159,8 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
             </span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Badge variant="outline" className={cn("text-[10px] font-mono", deviceProfile ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10" : "")}>
-              {deviceProfile ? "Scale Calibrated" : "ArUco 50mm Auto"}
+            <Badge variant="outline" className="text-[10px] font-mono">
+              Optical Metrology
             </Badge>
             <span className="text-[11px] text-primary hover:underline flex items-center gap-0.5">
               {showLotSetup ? "Hide Details" : "Edit Details"}
@@ -225,7 +180,7 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
                   value={lotId}
                   onChange={(e) => setLotId(e.target.value)}
                   className="h-8 text-xs font-mono"
-                  placeholder="e.g. DOCA-4082"
+                  placeholder="e.g. LOT-4082"
                 />
               </div>
 
@@ -256,81 +211,30 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px]">
               <span className="text-muted-foreground">
-                Active Scale: <span className="font-mono text-foreground font-semibold">
-                  {deviceProfile
-                    ? `Device Calibrated: ${deviceProfile.pixels_per_mm.toFixed(2)} px/mm (${deviceProfile.ppi.toFixed(0)} PPI)`
-                    : "ArUco 50mm Optical Card (Auto-detect in frame)"}
-                </span>
+                Metrology System: <span className="font-mono text-foreground font-semibold">50mm ArUco Marker (In-Frame) or 55mm Median Prior</span>
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsCalibModalOpen(true)}
-                className="h-7 text-[11px] gap-1.5 border-border hover:bg-muted font-medium"
-              >
-                <Smartphone className="size-3 text-primary" />
-                {deviceProfile ? "Manage Scale Profile" : "Calibrate Camera Scale"}
-              </Button>
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Persistent Device Calibration Banner ── */}
-      {deviceProfile ? (
-        <div className="flex items-center justify-between rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-3.5 py-2.5 text-xs text-cyan-950 dark:text-cyan-200">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="size-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Device Profile Active:</span>
-                <span className="font-mono text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                  {deviceProfile.pixels_per_mm.toFixed(2)} px/mm
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  ({deviceProfile.ppi.toFixed(1)} PPI • tilt {deviceProfile.tilt_degrees.toFixed(1)}°)
-                </span>
-              </div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Zero-marker mode engaged. Onion lots without ArUco cards will use this verified scale.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCalibModalOpen(true)}
-              className="h-7 text-[11px] border-cyan-500/30 hover:bg-cyan-500/20"
-            >
-              Recalibrate
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleSaveDeviceProfile(null)}
-              className="h-7 text-[11px] text-muted-foreground hover:text-destructive"
-            >
-              Clear
-            </Button>
-          </div>
+      {/* ── Optical Metrology Guidance Bar ── */}
+      <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-3.5 py-2 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2">
+          <Ruler className="size-3.5 text-primary shrink-0" />
+          <span>
+            <strong className="text-foreground font-semibold">Standard Metrology:</strong> Include 50mm ArUco card in frame for certified millimeter sizing, or scan directly for 55mm fallback scale.
+          </span>
         </div>
-      ) : (
-        <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 px-3.5 py-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Ruler className="size-3.5 text-muted-foreground shrink-0" />
-            <span>Standard Optical Mode: Requires 50mm ArUco card in frame.</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCalibModalOpen(true)}
-            className="h-6 text-[11px] text-cyan-600 dark:text-cyan-400 hover:underline p-0"
-          >
-            Pre-calibrate device scale &rarr;
-          </Button>
-        </div>
-      )}
+        <a
+          href="/aruco_marker_50mm.png"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[11px] font-medium text-primary hover:underline shrink-0 hidden sm:inline"
+        >
+          Print Marker &rarr;
+        </a>
+      </div>
 
       {/* ── Mobile Field Action Bar (1-Tap Live Camera & Native Camera) ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -448,71 +352,6 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
         )}
       </div>
 
-      {/* ── Official Demo Presets Bar ── */}
-      {state === "idle" && (
-        <div className="rounded-2xl border border-border/80 bg-muted/20 p-3.5 space-y-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Sparkles className="size-3.5 text-primary" /> Instant Test Trays:
-            </span>
-            <a
-              href="/aruco_marker_50mm.png"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] font-medium text-primary hover:underline flex items-center gap-1"
-            >
-              📄 Printable 50mm Marker
-            </a>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              type="button"
-              onClick={() => loadSample("demo_calibrated_doca_pass.jpg")}
-              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-emerald-500 hover:bg-emerald-500/5 transition-all text-left shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="size-2 rounded-full bg-emerald-500 group-hover:scale-125 transition-transform" />
-                <span className="text-xs font-bold text-foreground">Grade A Pass</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">6 Bulbs • 50mm Card</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => loadSample("demo_defective_lot_reject.jpg")}
-              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-rose-500 hover:bg-rose-500/5 transition-all text-left shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="size-2 rounded-full bg-rose-500 group-hover:scale-125 transition-transform" />
-                <span className="text-xs font-bold text-foreground">Defect Reject</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">15 Bulbs • Sprout &amp; Rot</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => loadSample("demo_commercial_crate_36bulbs.jpg")}
-              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-primary hover:bg-primary/5 transition-all text-left shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="size-2 rounded-full bg-primary group-hover:scale-125 transition-transform" />
-                <span className="text-xs font-bold text-foreground">34-Bulb Crate</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">High-Density Sorting</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => loadSample("demo_uncalibrated_warning.jpg")}
-              className="group flex flex-col items-start p-2.5 rounded-xl border border-border/70 bg-card hover:border-amber-500 hover:bg-amber-500/5 transition-all text-left shadow-xs cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <span className="size-2 rounded-full bg-amber-500 group-hover:scale-125 transition-transform" />
-                <span className="text-xs font-bold text-foreground">Fallback Mode</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground">55mm Median Prior</span>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Analyze CTA ── */}
       <Button
         size="lg"
@@ -527,7 +366,7 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
       >
         {isUploading && <Loader2 className="size-5 animate-spin" />}
         {isUploading
-          ? "Analyzing & Grading against DoCA Standards..."
+          ? "Analyzing Produce Quality & Metrology..."
           : state === "preview"
           ? "Run AI Lot Assessment & FAQ Grading"
           : "Select or Drop a Sample Image to Begin"}
@@ -538,14 +377,6 @@ export function ImageUploader({ onUpload, isUploading, uploadError }: ImageUploa
           {uploadError}
         </p>
       )}
-
-      {/* Device Scale Burner Calibration Modal */}
-      <BurnerCalibrationModal
-        isOpen={isCalibModalOpen}
-        onClose={() => setIsCalibModalOpen(false)}
-        currentProfile={deviceProfile}
-        onSaveProfile={handleSaveDeviceProfile}
-      />
 
       {/* Live Camera Viewfinder Modal with Sampling Tray HUD */}
       <LiveCameraModal

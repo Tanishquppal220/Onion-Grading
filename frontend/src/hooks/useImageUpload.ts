@@ -4,10 +4,6 @@ import type { UploadResponse } from "@/types/grading";
 
 export interface UploadOptions {
   calibration_mode?: string;
-  device_calibration_scale?: number;
-  custom_mm_per_pixel?: number;
-  reference_dimension_mm?: number;
-  reference_pixels?: number;
   lot_id?: string;
   farmer_name?: string;
   mandi_location?: string;
@@ -26,20 +22,8 @@ export function useImageUpload() {
       const formData = new FormData();
       formData.append("file", file);
 
-      if (options?.device_calibration_scale !== undefined && options.device_calibration_scale > 0) {
-        formData.append("device_calibration_scale", options.device_calibration_scale.toString());
-      }
       if (options?.calibration_mode) {
         formData.append("calibration_mode", options.calibration_mode);
-      }
-      if (options?.custom_mm_per_pixel !== undefined && options.custom_mm_per_pixel > 0) {
-        formData.append("custom_mm_per_pixel", options.custom_mm_per_pixel.toString());
-      }
-      if (options?.reference_dimension_mm !== undefined && options.reference_dimension_mm > 0) {
-        formData.append("reference_dimension_mm", options.reference_dimension_mm.toString());
-      }
-      if (options?.reference_pixels !== undefined && options.reference_pixels > 0) {
-        formData.append("reference_pixels", options.reference_pixels.toString());
       }
       if (options?.lot_id) {
         formData.append("lot_id", options.lot_id);

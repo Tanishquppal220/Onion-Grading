@@ -350,7 +350,7 @@ def test_api_cached_pdf_download(test_client, sample_onion_image):
     pdf_resp = test_client.get("/api/report/pdf/DOCA-PDF-007")
     assert pdf_resp.status_code == 200
     assert pdf_resp.headers["content-type"] == "application/pdf"
-    assert "inspection_certificate_DOCA-PDF-007.pdf" in pdf_resp.headers["content-disposition"]
+    assert "inspection_report_DOCA-PDF-007.pdf" in pdf_resp.headers["content-disposition"]
     assert pdf_resp.content.startswith(b"%PDF-")
     assert len(pdf_resp.content) > 10000
 

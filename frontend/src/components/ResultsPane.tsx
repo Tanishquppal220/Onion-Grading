@@ -6,8 +6,6 @@ import {
   Ruler,
   Layers,
   CheckCircle2,
-  AlertTriangle,
-  Camera,
   Eye,
   Scale,
   BarChart3,
@@ -123,10 +121,10 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
         <Card className={cn(
           "overflow-hidden border-2 shadow-lg transition-all rounded-2xl",
           decision.status === "accepted"
-            ? "border-emerald-500/50 bg-gradient-to-br from-emerald-500/10 via-card to-card"
+            ? "border-emerald-500/50 bg-linear-to-br from-emerald-500/10 via-card to-card"
             : decision.status === "conditional"
-            ? "border-amber-500/50 bg-gradient-to-br from-amber-500/10 via-card to-card"
-            : "border-rose-500/50 bg-gradient-to-br from-rose-500/10 via-card to-card"
+            ? "border-amber-500/50 bg-linear-to-br from-amber-500/10 via-card to-card"
+            : "border-rose-500/50 bg-linear-to-br from-rose-500/10 via-card to-card"
         )}>
           <div className="p-5 sm:p-6 space-y-5">
             {/* Header: Grade & Primary Action Buttons */}
@@ -150,7 +148,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
 
                 {decision.buffer_stock_fit && (
                   <Badge variant="outline" className="border-emerald-500/40 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 text-xs font-medium">
-                    ✓ Central Buffer Stock Approved
+                    ✓ Meets Buffer FAQ Specifications
                   </Badge>
                 )}
               </div>
@@ -173,7 +171,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                   className="h-9 text-xs gap-1.5 font-bold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground cursor-pointer"
                 >
                   <FileText className="size-4" />
-                  <span>Official PDF Certificate</span>
+                  <span>PDF Assessment Report</span>
                 </Button>
               </div>
             </div>
@@ -337,11 +335,11 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                 )}
               </CardHeader>
               <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="relative overflow-hidden rounded-xl border border-border/80 bg-neutral-900/5 dark:bg-black/30 shadow-inner flex items-center justify-center min-h-72 max-h-[32rem]">
+                <div className="relative overflow-hidden rounded-xl border border-border/80 bg-neutral-900/5 dark:bg-black/30 shadow-inner flex items-center justify-center min-h-72 max-h-128">
                   <img
                     src={showOriginal ? rawImageUrl : annotatedImageUrl}
                     alt="Inspection detection output"
-                    className="w-full max-h-[32rem] object-contain rounded-lg transition-all duration-300"
+                    className="w-full max-h-128 object-contain rounded-lg transition-all duration-300"
                   />
                   <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md text-white text-[11px] font-medium px-3 py-1 rounded-full border border-white/20">
                     {showOriginal ? "Raw Camera Photograph" : "YOLOv8 Polygon Masks & Sizing Overlays"}
@@ -380,7 +378,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                       DoCA Fair Average Quality (FAQ) Tolerance Matrix
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
-                      Official statutory tolerances for Price Stabilization Fund procurement
+                      Quality tolerance matrix benchmarked against Price Stabilization Fund FAQ norms
                     </CardDescription>
                   </div>
                   <Badge variant="outline" className="text-xs font-mono border-primary/30 text-primary">
@@ -517,7 +515,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
               <CardHeader className="pb-3">
                 <CardTitle className="text-base font-bold">Rule Engine Audit Log &amp; Reasons</CardTitle>
                 <CardDescription className="text-xs">
-                  Deterministic justifications based on Government of India circulars
+                  Deterministic justifications based on published FAQ specifications
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2 text-xs">
@@ -606,7 +604,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
                 className="gap-1.5 shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground font-bold cursor-pointer"
               >
                 <FileText className="size-4" />
-                <span>Official PDF Certificate</span>
+                <span>PDF Assessment Report</span>
               </Button>
             </div>
           </CardContent>

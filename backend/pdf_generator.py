@@ -1,21 +1,20 @@
-"""PDF Inspection Certificate Generator using ReportLab.
+"""PDF Inspection Report Generator using ReportLab.
 
-Generates official A4 audit certificates for DoCA Buffer-Stock Procurement
-and AGMARK commercial onion grading.
+Generates A4 assessment reports benchmarked against DoCA Buffer-Stock Procurement
+and AGMARK commercial onion grading standards.
 """
 
 from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
 import cv2
 import numpy as np
-
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch
 from reportlab.platypus import (
     HRFlowable,
     Image as RLImage,
@@ -26,7 +25,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-from training.common.schemas import LotReportSummary
+if TYPE_CHECKING:
+    from training.common.schemas import LotReportSummary
 
 
 def generate_lot_pdf_report(
@@ -34,15 +34,20 @@ def generate_lot_pdf_report(
     annotated_image_bgr: Optional[np.ndarray] = None,
     output_path: Optional[str | Path] = None,
 ) -> bytes:
-    """Generates an official A4 PDF quality assessment report.
+    """Generates an A4 PDF quality assessment report.
     
+    Args:
+        summary: LotReportSummary containing aggregated quality metrics and individual onions.
+        annotated_image_bgr: Optional BGR annotated image to embed in the report.
+        output_path: Optional file path to write the PDF to disk.
+        
     Returns:
-        bytes of the PDF document
+        bytes: Raw PDF file bytes.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=letter,
+        pagesize=A4,
         rightMargin=36,
         leftMargin=36,
         topMargin=36,
@@ -50,69 +55,71 @@ def generate_lot_pdf_report(
     )
 
     styles = getSampleStyleSheet()
+
+    # Custom styles
     title_style = ParagraphStyle(
-        "ReportTitle",
-        parent=styles["Heading1"],
-        fontSize=16,
-        leading=20,
-        alignment=1,
+        "CertTitle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=15,
+        leading=18,
         textColor=colors.HexColor("#1A365D"),
+        spaceAfter=3,
+        alignment=1,  # Center
     )
     subtitle_style = ParagraphStyle(
-        "ReportSubtitle",
+        "CertSubtitle",
         parent=styles["Normal"],
-        fontSize=10,
-        leading=13,
-        alignment=1,
+        fontName="Helvetica",
+        fontSize=9,
+        leading=11,
         textColor=colors.HexColor("#4A5568"),
+        spaceAfter=6,
+        alignment=1,  # Center
     )
     section_style = ParagraphStyle(
-        "SectionHeader",
-        parent=styles["Heading2"],
-        fontSize=12,
-        leading=15,
+        "CertSection",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=13,
         textColor=colors.HexColor("#2B6CB0"),
-        spaceAfter=6,
+        spaceBefore=6,
+        spaceAfter=4,
     )
     body_style = ParagraphStyle(
-        "BodyTextCustom",
+        "CertBody",
         parent=styles["Normal"],
-        fontSize=8.5,
-        leading=11,
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
         textColor=colors.HexColor("#2D3748"),
     )
     table_hdr_style = ParagraphStyle(
-        "TableHdr",
+        "CertTableHdr",
         parent=styles["Normal"],
-        fontSize=8,
-        leading=10,
         fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=9,
         textColor=colors.white,
     )
 
     story = []
 
-    # 1. Official Header
-    story.append(Paragraph("ONION QUALITY ASSESSMENT & GRADING CERTIFICATE", title_style))
-    story.append(Paragraph("Procurement Center Digital Inspection Audit · Department of Consumer Affairs (DoCA) & AGMARK Standards", subtitle_style))
+    # 1. Report Header
+    story.append(Paragraph("ONION QUALITY ASSESSMENT & GRADING REPORT", title_style))
+    story.append(Paragraph("Automated Produce Inspection Analysis · Benchmarked Against DoCA & AGMARK Standards", subtitle_style))
     story.append(Spacer(1, 10))
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#2B6CB0"), spaceAfter=10))
 
     # 2. Calibration Banner
-    if summary.calibration.mm_reliable:
-        if summary.calibration.card_detected:
-            calib_text = f"<b>CALIBRATION VERIFIED (In-Frame ArUco):</b> Reference marker detected ({summary.calibration.pixels_per_mm:.1f} px/mm, camera tilt: {summary.calibration.tilt_degrees or 0.0:.1f}°). True metric millimeters verified."
-            calib_color = colors.HexColor("#C6F6D5")
-            calib_border = colors.HexColor("#38A169")
-            txt_color = colors.HexColor("#22543D")
-        else:
-            ppi_val = round(summary.calibration.pixels_per_mm * 25.4, 1)
-            calib_text = f"<b>DEVICE PROFILE CALIBRATED (Session Burner Reference):</b> Verified scale ({summary.calibration.pixels_per_mm:.2f} px/mm, {ppi_val} PPI). True metric millimeters verified without in-frame card."
-            calib_color = colors.HexColor("#EBF8FF")
-            calib_border = colors.HexColor("#3182CE")
-            txt_color = colors.HexColor("#2A4365")
+    if summary.calibration.mm_reliable and summary.calibration.card_detected:
+        calib_text = f"<b>CALIBRATION VERIFIED (In-Frame ArUco):</b> Reference marker detected ({summary.calibration.pixels_per_mm:.1f} px/mm, camera tilt: {summary.calibration.tilt_degrees or 0.0:.1f}°). True metric millimeters verified."
+        calib_color = colors.HexColor("#C6F6D5")
+        calib_border = colors.HexColor("#38A169")
+        txt_color = colors.HexColor("#22543D")
     else:
-        calib_text = "<b>WARNING — UNCALIBRATED LOT:</b> No optical reference marker detected. Measurements derived from 55 mm median bulb prior. Indicative estimates only."
+        calib_text = "<b>WARNING — UNCALIBRATED LOT:</b> No optical reference marker detected in frame. Measurements derived from empirical 55 mm median bulb prior. Indicative estimates only."
         calib_color = colors.HexColor("#FEEBC8")
         calib_border = colors.HexColor("#DD6B20")
         txt_color = colors.HexColor("#7B341E")
@@ -227,7 +234,7 @@ def generate_lot_pdf_report(
     comp_data = [
         [
             Paragraph("<b>Regulatory Compliance Statement:</b><br/>" + summary.compliance_statement, body_style),
-            Paragraph("<b>Inspection Officer Sign-off:</b><br/><br/>___________________________<br/>Procurement Assessor ID", body_style),
+            Paragraph("<b>Assessor / Operator Verification:</b><br/><br/>___________________________<br/>Assessor / Researcher ID", body_style),
         ]
     ]
     comp_table = Table(comp_data, colWidths=[360, 180])

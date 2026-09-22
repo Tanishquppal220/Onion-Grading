@@ -51,7 +51,7 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
     const url = `${baseUrl}/api/report/pdf/${encodeURIComponent(lot_metadata.lot_id)}`
     const link = document.createElement("a")
     link.href = url
-    link.download = `DoCA_Inspection_Certificate_${lot_metadata.lot_id}.pdf`
+    link.download = `Inspection_Report_${lot_metadata.lot_id}.pdf`
     link.click()
   }
 
@@ -77,8 +77,8 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
         {/* Actions bar (hidden in print) */}
         <div className="flex flex-wrap items-center justify-between border-b border-border pb-4 mb-6 gap-3 print:hidden">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="size-4 text-green-500" />
-            <span>DoCA Official Procurement Record · Tamper-evident Audit Certificate</span>
+            <ShieldCheck className="size-4 text-primary" />
+            <span>Automated Quality Assessment · Prototype Inspection Report</span>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleDownloadJson} className="gap-1.5 text-xs">
@@ -93,10 +93,10 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
               size="sm"
               onClick={handleDownloadOfficialPdf}
               className="gap-1.5 text-xs bg-primary text-primary-foreground font-semibold shadow-sm"
-              title="Download official ReportLab vector PDF certificate"
+              title="Download ReportLab vector PDF assessment report"
             >
               <FileDown className="size-3.5" />
-              Download Official PDF
+              Download PDF Report
             </Button>
             <button
               onClick={onClose}
@@ -108,20 +108,20 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
           </div>
         </div>
 
-        {/* ── Official Government Letterhead ── */}
+        {/* ── Prototype Report Letterhead ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-primary/40 pb-6 mb-6 print:flex-row print:items-center print:pb-3 print:mb-4 print-avoid-break">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono tracking-widest uppercase px-2 py-0.5 rounded bg-primary/10 text-primary font-bold">
-                Government of India
+                Research Prototype
               </span>
-              <span className="text-[10px] text-muted-foreground">DoCA / NAFED / NCCF</span>
+              <span className="text-[10px] text-muted-foreground">OnionGrade AI • Computer Vision Quality Bench</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              Onion Quality Assessment &amp; Inspection Certificate
+              Onion Quality Assessment &amp; Grading Report
             </h1>
             <p className="text-xs text-muted-foreground">
-              Department of Consumer Affairs · Price Stabilization Fund (PSF) Central Buffer Procurement
+              Automated Produce Inspection Analysis · Benchmarked Against DoCA 45–65mm FAQ Specifications
             </p>
           </div>
 
@@ -422,23 +422,23 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
           </div>
         </div>
 
-        {/* ── Official Signature & Verification Block ── */}
+        {/* ── System Audit & Verification Block ── */}
         <div className="grid grid-cols-2 gap-6 pt-4 border-t border-border text-xs print-avoid-break">
           <div className="space-y-1">
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Inspecting Officer Sign-off</span>
-            <p className="font-bold text-foreground">Dr. S. K. Sharma, Quality Inspector</p>
-            <p className="text-[10px] text-muted-foreground">DoCA / NAFED Mandi Procurement Division</p>
-            <p className="font-mono text-[9px] text-muted-foreground">ID: DOCA-APMC-INSP-4082</p>
+            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Operator / Assessor Record</span>
+            <p className="font-bold text-foreground">{lot_metadata.farmer_name || "Mandi Quality Assessor"}</p>
+            <p className="text-[10px] text-muted-foreground">System Audit · Mandi Assessment Session</p>
+            <p className="font-mono text-[9px] text-muted-foreground">Assessor Ref: EVAL-{lot_metadata.lot_id}</p>
           </div>
 
           <div className="text-right space-y-1">
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Digital Verification Stamp</span>
-            <div className="flex items-center justify-end gap-1 text-green-600 font-bold">
-              <CheckCircle2 className="size-4" />
-              <span>DIGITALLY CERTIFIED</span>
+            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Pipeline Verification Hash</span>
+            <div className="flex items-center justify-end gap-1 text-primary font-bold">
+              <CheckCircle2 className="size-4 text-emerald-600" />
+              <span>EVALUATION LOGGED</span>
             </div>
-            <p className="font-mono text-[9px] text-muted-foreground">Signed at: {new Date(lot_metadata.timestamp).toISOString()}</p>
-            <p className="font-mono text-[9px] text-muted-foreground">Hash: {auditHash}</p>
+            <p className="font-mono text-[9px] text-muted-foreground">Logged at: {new Date(lot_metadata.timestamp).toISOString()}</p>
+            <p className="font-mono text-[9px] text-muted-foreground">Audit Hash: {auditHash}</p>
           </div>
         </div>
 
