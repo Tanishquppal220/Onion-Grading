@@ -21,10 +21,6 @@ backend/data/model2/*
 !backend/data/model2/.gitkeep
 backend/data/synthetic_calibration/*
 !backend/data/synthetic_calibration/.gitkeep
-runs/
-backend/runs/
-*.pt
-*.onnx
 *.tflite
 *.engine
 *.tar.gz
