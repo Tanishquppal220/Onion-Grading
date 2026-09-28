@@ -39,6 +39,12 @@ export function LiveCameraModal({ isOpen, onClose, onCapture }: LiveCameraModalP
 
     async function mountCamera() {
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error(
+            "Live camera streaming requires HTTPS or localhost. Please start Vite with 'npm run dev:https' or use the 'Snap Photo (Phone Camera)' button on the main screen."
+          )
+        }
+
         const constraints: MediaStreamConstraints = {
           video: selectedCameraId
             ? { deviceId: { exact: selectedCameraId } }

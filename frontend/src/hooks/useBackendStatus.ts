@@ -3,7 +3,7 @@ import { useEffect, useSyncExternalStore } from "react"
 export type BackendStatusType = "connecting" | "online" | "offline"
 
 const HEALTH_URL =
-  (import.meta.env.VITE_API_URL ?? "http://localhost:8000") + "/api/health"
+  (import.meta.env.VITE_API_URL || "") + "/api/health"
 
 const POLL_INTERVAL_MS = 10_000
 const TIMEOUT_MS = 3_000

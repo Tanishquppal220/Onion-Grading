@@ -28,7 +28,7 @@ export function DigitalReportModal({ isOpen, onClose, data }: DigitalReportModal
   const { lot_metadata, grading } = data
   const { decision, quality_counts, quality_percentages, size_counts, size_percentages, audit_metrics, calibration } = grading
 
-  const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+  const baseUrl = import.meta.env.VITE_API_URL || ""
   const rawImageUrl = `${baseUrl}/uploads/${data.filename}`
   const annotatedImageUrl = `${baseUrl}/uploads/${grading.annotated_image_filename}`
 

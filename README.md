@@ -31,8 +31,32 @@ uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 cd frontend
 npm install
 
-# Run frontend development server
+# Run frontend development server (accessible on local network)
 npm run dev
+
+# Or run with HTTPS for real-time mobile camera viewfinder HUD:
+npm run dev:https
 ```
+
+## Mobile Phone Access (Local Wi-Fi / Hotspot)
+
+To use the system on your mobile phone:
+
+1. **Firewall (UFW on Linux)**: Ensure port 5173 is open:
+   ```bash
+   sudo ufw allow 5173/tcp
+   ```
+
+2. **1-Command Network Launcher**:
+   ```bash
+   ./start_network.sh
+   # Or with HTTPS (enables live camera viewfinder on phone):
+   ./start_network.sh --https
+   ```
+
+3. **Open on Phone**:
+   Connect your phone to the same Wi-Fi/hotspot and open the URL printed in the terminal (e.g. `http://192.168.1.13:5173/`).
+   - **Snap Photo**: Tap **`Snap Photo (Phone Camera)`** to capture directly with your phone's native camera.
+   - **Live Viewfinder**: If using `--https`, tap **`Open Live Viewfinder HUD`** to stream real-time video with tray reticle and torch control.
 
 

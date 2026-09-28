@@ -35,7 +35,7 @@ export function ResultsPane({ data, lotMetadata, rawImageFilename }: ResultsPane
   const [isStandardsOpen, setIsStandardsOpen] = useState(false)
   const [showOriginal, setShowOriginal] = useState(false)
 
-  const baseUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
+  const baseUrl = import.meta.env.VITE_API_URL || ""
   const annotatedImageUrl = `${baseUrl}/uploads/${data.annotated_image_filename}`
   const rawImageUrl = rawImageFilename ? `${baseUrl}/uploads/${rawImageFilename}` : annotatedImageUrl
 
