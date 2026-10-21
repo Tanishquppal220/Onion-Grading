@@ -47,7 +47,7 @@ def generate_synthetic_scene(
 
     # Planar scale: scale_px_per_mm = focal_px / camera_distance_mm
     scale_px_per_mm = focal_px / camera_distance_mm
-    marker_px = int(round(marker_size_mm * scale_px_per_mm))
+    marker_px = round(marker_size_mm * scale_px_per_mm)
 
     # 1. Render ArUco marker
     dict_4x4 = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -62,7 +62,7 @@ def generate_synthetic_scene(
     # Note: Elevation above plane increases apparent size by Z / (Z - r)
     true_r_mm = true_diameter_mm / 2.0
     apparent_diameter_mm = true_diameter_mm * (camera_distance_mm / (camera_distance_mm - true_r_mm))
-    apparent_radius_px = int(round((apparent_diameter_mm / 2.0) * scale_px_per_mm))
+    apparent_radius_px = round((apparent_diameter_mm / 2.0) * scale_px_per_mm)
 
     ox, oy = int(w * 0.7), int(h * 0.5)
     draw_synthetic_onion(img, (ox, oy), apparent_radius_px)
@@ -71,7 +71,6 @@ def generate_synthetic_scene(
     if abs(tilt_degrees) > 0.1:
         # Tilt around X-axis (top tilts away)
         theta = math.radians(tilt_degrees)
-        d = w / 2.0
         src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
         offset = math.tan(theta) * (h / 4.0)
         dst = np.float32([[offset, 0], [w - offset, 0], [w, h], [0, h]])
@@ -92,10 +91,14 @@ def generate_synthetic_scene(
 
 def create_synthetic_benchmark_dataset(
     output_dir: Path | str,
-    test_diameters: list[float] = [38.0, 45.0, 52.0, 60.0, 68.0],
-    test_tilts: list[float] = [0.0, 10.0, 20.0],
+    test_diameters: list[float] | None = None,
+    test_tilts: list[float] | None = None,
 ) -> list[Path]:
     """Builds a test suite of synthetic calibration images and saves ground-truth metadata."""
+    if test_diameters is None:
+        test_diameters = [38.0, 45.0, 52.0, 60.0, 68.0]
+    if test_tilts is None:
+        test_tilts = [0.0, 10.0, 20.0]
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     generated_files = []

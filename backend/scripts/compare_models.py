@@ -53,7 +53,7 @@ def load_models():
 
 def draw_label(img, text, pt, bg_color, text_color=(255, 255, 255), font_scale=0.45, thickness=1):
     x, y = pt
-    (w, h), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+    (w, h), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
     cv2.rectangle(img, (x, y - h - 6), (x + w + 4, y + 2), bg_color, -1)
     cv2.putText(img, text, (x + 2, y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, thickness, cv2.LINE_AA)
 
@@ -123,7 +123,7 @@ def run_new_pipeline(m1_seg, m2_cls, img_bgr, conf_thresh=0.25):
                     cnt = max(contours, key=cv2.contourArea)
                     has_mask = True
                     if len(cnt) >= 5:
-                        (cx, cy), (d1, d2), angle = cv2.fitEllipse(cnt)
+                        (cx, cy), (d1, d2), _ = cv2.fitEllipse(cnt)
                         diameter_px = max(d1, d2)
                         center = (int(cx), int(cy))
 

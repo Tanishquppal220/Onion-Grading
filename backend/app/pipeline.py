@@ -270,8 +270,11 @@ class GradingPipeline:
                 # confidence (p_healthy < 0.40, indicating >= 60% cumulative defect probability)
                 # corroborated by noticeable surface blemish (defect_pct >= 10.0%), classify as
                 # the dominant defect rather than incorrectly defaulting to sound Grade-A.
-                if not (is_sprouted or is_rotten or is_damaged):
-                    if p_healthy < 0.40 and defect_pct >= 10.0:
+                if (
+                    not (is_sprouted or is_rotten or is_damaged)
+                    and p_healthy < 0.40
+                    and defect_pct >= 10.0
+                ):
                         if p_rotten >= p_damage and p_rotten >= p_sprouted:
                             is_rotten = True
                         elif p_sprouted >= p_damage and p_sprouted >= p_rotten:

@@ -58,7 +58,7 @@ def test_client(pipeline_instance):
 
 def test_pipeline_on_synthetic_aruco_scene(pipeline_instance):
     """Tests GradingPipeline on a synthetic scene with known ArUco marker."""
-    scene, gt = generate_synthetic_scene(
+    scene, _ = generate_synthetic_scene(
         true_diameter_mm=50.0,
         marker_size_mm=50.0,
         camera_distance_mm=450.0,
@@ -82,7 +82,7 @@ def test_pipeline_on_synthetic_aruco_scene(pipeline_instance):
 
 def test_pipeline_on_real_onion_image(pipeline_instance, sample_onion_image):
     """Tests full pipeline on real onion imagery with segmentation and classification."""
-    summary, annotated_img = pipeline_instance.analyze_image(
+    summary, _ = pipeline_instance.analyze_image(
         image_bgr=sample_onion_image,
         lot_id="LOT-REAL-01",
         center_id="NCCF-Pune-02",
@@ -117,6 +117,7 @@ def test_pipeline_on_real_onion_image(pipeline_instance, sample_onion_image):
 def test_p_healthy_split_vote_mitigation(pipeline_instance, sample_onion_image, monkeypatch):
     """Verifies that low p_healthy (high aggregate defect probability) with blemish is flagged defective."""
     from unittest.mock import MagicMock
+
     import torch
 
     # Mock Model 2 output with split-vote defect probabilities:

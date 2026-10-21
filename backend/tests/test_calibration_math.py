@@ -14,7 +14,7 @@ from tests.fixtures.generate_synthetic_set import generate_synthetic_scene
 def test_aruco_detection_and_scale():
     calibrator = ArUcoCalibrator(marker_size_mm=50.0)
     # Generate scene with 50mm diameter, 0 tilt, 450mm distance
-    scene, gt = generate_synthetic_scene(true_diameter_mm=50.0, tilt_degrees=0.0, camera_distance_mm=450.0)
+    scene, _ = generate_synthetic_scene(true_diameter_mm=50.0, tilt_degrees=0.0, camera_distance_mm=450.0)
 
     found, corners, tilt_deg = calibrator.detect_marker(scene)
     assert found is True
