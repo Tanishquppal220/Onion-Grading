@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -17,12 +17,14 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import (
     HRFlowable,
-    Image as RLImage,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
+)
+from reportlab.platypus import (
+    Image as RLImage,
 )
 
 if TYPE_CHECKING:
@@ -31,8 +33,8 @@ if TYPE_CHECKING:
 
 def generate_lot_pdf_report(
     summary: LotReportSummary,
-    annotated_image_bgr: Optional[np.ndarray] = None,
-    output_path: Optional[str | Path] = None,
+    annotated_image_bgr: np.ndarray | None = None,
+    output_path: str | Path | None = None,
 ) -> bytes:
     """Generates an A4 PDF quality assessment report.
     

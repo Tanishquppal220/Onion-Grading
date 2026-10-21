@@ -11,12 +11,11 @@ Outputs:
 
 from __future__ import annotations
 
-import os
-from pathlib import Path
 import time
+from pathlib import Path
+
 import cv2
 import numpy as np
-import torch
 from ultralytics import YOLO
 
 # Paths
@@ -263,7 +262,7 @@ def main():
         OUTPUT_PLOT_PATH.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(OUTPUT_PLOT_PATH), montage)
         print("\n" + "=" * 80)
-        print(f" SAVED SIDE-BY-SIDE VISUAL COMPARISON TO:")
+        print(" SAVED SIDE-BY-SIDE VISUAL COMPARISON TO:")
         print(f" {OUTPUT_PLOT_PATH}")
         print("=" * 80)
 

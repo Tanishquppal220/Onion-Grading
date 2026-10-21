@@ -7,7 +7,7 @@ AGMARK / Export size band standards, and FSSAI fruit & vegetable defect toleranc
 from __future__ import annotations
 
 import math
-from typing import List, Tuple
+
 from .schemas import (
     CalibrationMetadata,
     GradesResult,
@@ -16,7 +16,6 @@ from .schemas import (
     OnionRecord,
     QualityFlags,
 )
-
 
 # Standard thresholds per Grade Definitions.md
 DOCA_MIN_DIAMETER_MM = 45.0
@@ -128,7 +127,7 @@ def summarize_lot(
     center_id: str,
     timestamp: str,
     calibration: CalibrationMetadata,
-    onions: List[OnionRecord],
+    onions: list[OnionRecord],
 ) -> LotReportSummary:
     """Aggregates per-onion evaluation records into a complete lot-level audit report."""
     total = len(onions)

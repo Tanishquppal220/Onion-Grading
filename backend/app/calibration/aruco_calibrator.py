@@ -8,11 +8,11 @@ Ref: Dataset Plan.md §6 and Technical Approach.md §7.3.
 from __future__ import annotations
 
 import math
-from typing import Optional, Tuple
+
 import cv2
 import numpy as np
-from ..common.schemas import CalibrationMetadata, CalibrationMode
 
+from ..common.schemas import CalibrationMetadata, CalibrationMode
 
 # Default reference marker parameters
 DEFAULT_MARKER_SIZE_MM = 50.0  # 50 mm square printed marker
@@ -40,7 +40,7 @@ class ArUcoCalibrator:
         else:
             self.detector = None
 
-    def detect_marker(self, image_bgr: np.ndarray) -> Tuple[bool, Optional[np.ndarray], Optional[float]]:
+    def detect_marker(self, image_bgr: np.ndarray) -> tuple[bool, np.ndarray | None, float | None]:
         """Detects ArUco marker corners and estimates camera tilt angle.
         
         Returns:
@@ -78,15 +78,14 @@ class ArUcoCalibrator:
     def calibrate(
         self,
         image_bgr: np.ndarray,
-        exif_focal_px: Optional[float] = None,
-        detected_onion_pixel_diameters: Optional[list[float]] = None,
-    ) -> Tuple[CalibrationMetadata, float]:
+        exif_focal_px: float | None = None,
+        detected_onion_pixel_diameters: list[float] | None = None,
+    ) -> tuple[CalibrationMetadata, float]:
         """Calibrates scale in pixels per mm for the given image.
         
         Returns:
             (CalibrationMetadata, pixels_per_mm)
         """
-        focal_px = exif_focal_px or self.default_focal_px
         found, corners, tilt_deg = self.detect_marker(image_bgr)
 
         if not found or corners is None:
@@ -130,8 +129,8 @@ class ArUcoCalibrator:
         self,
         pixel_diameter: float,
         planar_scale_px_per_mm: float,
-        camera_distance_mm: Optional[float] = None,
-        focal_px: Optional[float] = None,
+        camera_distance_mm: float | None = None,
+        focal_px: float | None = None,
     ) -> float:
         """Converts pixel diameter to real-world mm with height-above-plane compensation.
         
@@ -163,9 +162,9 @@ class ArUcoCalibrator:
     def compensate_height_above_plane(
         self,
         apparent_mm: float,
-        bulb_height_above_plane_mm: Optional[float] = None,
-        focal_px: Optional[float] = None,
-        camera_distance_mm: Optional[float] = None,
+        bulb_height_above_plane_mm: float | None = None,
+        focal_px: float | None = None,
+        camera_distance_mm: float | None = None,
     ) -> float:
         """Applies height-above-plane focal compensation to an apparent millimeter dimension.
         
@@ -177,7 +176,6 @@ class ArUcoCalibrator:
         if apparent_mm <= 0:
             return 0.0
 
-        f = focal_px or self.default_focal_px
         z = camera_distance_mm
         if z is None:
             # Default nominal handheld working distance ~450 mm (45 cm)

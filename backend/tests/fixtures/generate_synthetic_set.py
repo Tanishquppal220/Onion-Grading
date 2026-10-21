@@ -11,16 +11,16 @@ from __future__ import annotations
 import json
 import math
 from pathlib import Path
-from typing import Dict, List, Tuple
+
 import cv2
 import numpy as np
 
 
 def draw_synthetic_onion(
     canvas: np.ndarray,
-    center_xy: Tuple[int, int],
+    center_xy: tuple[int, int],
     radius_px: int,
-    color_bgr: Tuple[int, int, int] = (40, 70, 160),  # Red-onion tone
+    color_bgr: tuple[int, int, int] = (40, 70, 160),  # Red-onion tone
 ) -> None:
     """Draws a synthetic onion bulb with slight elliptical irregularity and shading."""
     cx, cy = center_xy
@@ -39,8 +39,8 @@ def generate_synthetic_scene(
     camera_distance_mm: float = 450.0,
     focal_px: float = 3200.0,
     tilt_degrees: float = 0.0,
-    canvas_size: Tuple[int, int] = (1280, 960),
-) -> Tuple[np.ndarray, Dict[str, float]]:
+    canvas_size: tuple[int, int] = (1280, 960),
+) -> tuple[np.ndarray, dict[str, float]]:
     """Generates a complete scene with ArUco marker and an onion bulb of exact ground truth diameter."""
     w, h = canvas_size
     img = np.full((h, w, 3), 235, dtype=np.uint8)  # Light neutral desk background
@@ -92,9 +92,9 @@ def generate_synthetic_scene(
 
 def create_synthetic_benchmark_dataset(
     output_dir: Path | str,
-    test_diameters: List[float] = [38.0, 45.0, 52.0, 60.0, 68.0],
-    test_tilts: List[float] = [0.0, 10.0, 20.0],
-) -> List[Path]:
+    test_diameters: list[float] = [38.0, 45.0, 52.0, 60.0, 68.0],
+    test_tilts: list[float] = [0.0, 10.0, 20.0],
+) -> list[Path]:
     """Builds a test suite of synthetic calibration images and saves ground-truth metadata."""
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)

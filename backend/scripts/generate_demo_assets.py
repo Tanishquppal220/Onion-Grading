@@ -8,9 +8,9 @@ Generates and stages official demonstration imagery for the Automated Onion Qual
   5. `demo_uncalibrated_warning.jpg`: Uncalibrated image demonstrating graceful fallback to 55mm prior
 """
 
-import sys
-from pathlib import Path
 import shutil
+from pathlib import Path
+
 import cv2
 import numpy as np
 

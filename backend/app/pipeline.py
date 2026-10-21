@@ -12,10 +12,9 @@ Orchestrates:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-import math
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Optional, Tuple
+
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -23,11 +22,13 @@ from ultralytics import YOLO
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 from .calibration.aruco_calibrator import ArUcoCalibrator
-from .common.rule_engine import estimate_weight_grams, evaluate_onion_grades, summarize_lot
+from .common.rule_engine import (
+    estimate_weight_grams,
+    evaluate_onion_grades,
+    summarize_lot,
+)
 from .common.schemas import (
-    CalibrationMetadata,
-    CalibrationMode,
-    GradesResult,
+    ClassificationConfidences,
     LotReportSummary,
     OnionMeasurements,
     OnionRecord,
@@ -110,9 +111,9 @@ class GradingPipeline:
         image_bgr: np.ndarray,
         lot_id: str = "LOT-001",
         center_id: str = "NAFED-Nashik-01",
-        focal_length_px: Optional[float] = None,
+        focal_length_px: float | None = None,
         conf_threshold: float = 0.25,
-    ) -> Tuple[LotReportSummary, np.ndarray]:
+    ) -> tuple[LotReportSummary, np.ndarray]:
         """Runs end-to-end quality assessment on a single image.
         
         Returns:
@@ -132,9 +133,9 @@ class GradingPipeline:
             verbose=False,
         )
 
-        detected_records: List[OnionRecord] = []
-        raw_pixel_diameters: List[float] = []
-        raw_onion_data: List[dict] = []
+        detected_records: list[OnionRecord] = []
+        raw_pixel_diameters: list[float] = []
+        raw_onion_data: list[dict] = []
 
         res0 = seg_results[0]
         boxes = res0.boxes
@@ -161,7 +162,7 @@ class GradingPipeline:
                 if contours:
                     cnt = max(contours, key=cv2.contourArea)
                     if len(cnt) >= 5:
-                        (cx, cy), (d1, d2), angle = cv2.fitEllipse(cnt)
+                        (cx, cy), (d1, d2), _angle = cv2.fitEllipse(cnt)
                         diam_px = max(d1, d2)
                         height_px = min(d1, d2)
                     else:
@@ -248,6 +249,13 @@ class GradingPipeline:
                 p_rotten = float(probs.data[2]) if len(probs.data) > 2 else 0.0
                 p_sprouted = float(probs.data[3]) if len(probs.data) > 3 else 0.0
 
+                cls_confidences = ClassificationConfidences(
+                    healthy=round(p_healthy, 3),
+                    mechanical_damage=round(p_damage, 3),
+                    rotten=round(p_rotten, 3),
+                    sprouted=round(p_sprouted, 3),
+                )
+
                 # Calibrated confidence gating with CIELAB colorimetry verification:
                 # - Sprouting requires clear vegetative shoot emergence (p_sprouted >= 0.65)
                 # - Rot requires either high neural confidence (p_rotten >= 0.70)
@@ -256,7 +264,31 @@ class GradingPipeline:
                 is_sprouted = p_sprouted >= 0.65
                 is_rotten = p_rotten >= 0.70 or (p_rotten >= 0.45 and defect_pct >= 15.0)
                 is_damaged = p_damage >= 0.70 or (p_damage >= 0.45 and defect_pct >= 20.0)
+
+                # Robust Health Gating & Split-Vote Defect Mitigation:
+                # If no single defect crossed its high threshold, but the model expresses low healthy
+                # confidence (p_healthy < 0.40, indicating >= 60% cumulative defect probability)
+                # corroborated by noticeable surface blemish (defect_pct >= 10.0%), classify as
+                # the dominant defect rather than incorrectly defaulting to sound Grade-A.
+                if not (is_sprouted or is_rotten or is_damaged):
+                    if p_healthy < 0.40 and defect_pct >= 10.0:
+                        if p_rotten >= p_damage and p_rotten >= p_sprouted:
+                            is_rotten = True
+                        elif p_sprouted >= p_damage and p_sprouted >= p_rotten:
+                            is_sprouted = True
+                        else:
+                            is_damaged = True
             else:
+                p_healthy = 1.0
+                p_damage = 0.0
+                p_rotten = 0.0
+                p_sprouted = 0.0
+                cls_confidences = ClassificationConfidences(
+                    healthy=1.0,
+                    mechanical_damage=0.0,
+                    rotten=0.0,
+                    sprouted=0.0,
+                )
                 is_sprouted = False
                 is_rotten = False
                 is_damaged = False
@@ -288,6 +320,7 @@ class GradingPipeline:
                 confidence=round(conf, 3),
                 measurements=measurements,
                 quality_flags=flags,
+                classification_confidences=cls_confidences,
                 grades=grades,
             )
             detected_records.append(record)
@@ -350,7 +383,7 @@ class GradingPipeline:
             )
 
         # 7. Step 7: Build Lot Summary Report
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         lot_summary = summarize_lot(
             lot_id=lot_id,
             center_id=center_id,

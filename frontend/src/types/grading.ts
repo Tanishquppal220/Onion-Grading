@@ -5,6 +5,37 @@ export interface QualityBreakdown {
   damaged: number
 }
 
+export interface ClassificationConfidences {
+  healthy: number
+  mechanical_damage: number
+  rotten: number
+  sprouted: number
+}
+
+export interface OnionRecordItem {
+  onion_id: string
+  bbox: number[]
+  confidence: number
+  measurements: {
+    equatorial_diameter_mm: number
+    height_mm?: number | null
+    estimated_weight_g?: number | null
+    defect_area_percent: number
+  }
+  quality_flags: {
+    sprouted: boolean
+    rotten: boolean
+    severe_damage: boolean
+  }
+  classification_confidences?: ClassificationConfidences | null
+  grades: {
+    procurement_grade: string
+    agmark_grade: string
+    export_grade: string
+    remarks: string
+  }
+}
+
 export interface QualityPercentages {
   healthy: number
   rotten: number
@@ -58,6 +89,7 @@ export interface AuditMetrics {
   raw_detections: number
   duplicates_suppressed: number
   avg_confidence: number
+  avg_healthy_confidence?: number
   nms_mode: string
   iou_threshold: number
   conf_threshold: number

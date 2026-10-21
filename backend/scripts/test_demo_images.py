@@ -11,7 +11,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 import cv2
 from app.pipeline import GradingPipeline
-from app.common.schemas import CalibrationMode
+
 
 def main():
     pipeline = GradingPipeline(

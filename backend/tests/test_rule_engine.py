@@ -4,18 +4,17 @@ Covers DoCA buffer-stock (45-65mm norm), AGMARK bands, defect priorities,
 weight estimation, and lot aggregation compliance statements.
 """
 
-import pytest
+from app.common.rule_engine import (
+    estimate_weight_grams,
+    evaluate_onion_grades,
+    summarize_lot,
+)
 from app.common.schemas import (
     CalibrationMetadata,
     CalibrationMode,
     OnionMeasurements,
     OnionRecord,
     QualityFlags,
-)
-from app.common.rule_engine import (
-    estimate_weight_grams,
-    evaluate_onion_grades,
-    summarize_lot,
 )
 
 

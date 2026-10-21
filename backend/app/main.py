@@ -130,7 +130,7 @@ def health_check():
 
 @app.post("/api/upload", tags=["Frontend Grading"])
 async def upload_image_frontend(
-    file: UploadFile | None,
+    file: UploadFile,
     lot_id: str = Form("LOT-001"),
     farmer_name: str = Form("Registered Grower"),
     mandi_location: str = Form("Lasalgaon APMC, Nashik"),
@@ -328,11 +328,22 @@ async def upload_image_frontend(
         "description": desc_str,
     }
 
+    avg_healthy_conf = (
+        round(float(np.mean([
+            o.classification_confidences.healthy * 100.0
+            for o in lot_summary.onions
+            if o.classification_confidences is not None
+        ])), 1)
+        if any(o.classification_confidences is not None for o in lot_summary.onions)
+        else 0.0
+    )
+
     audit_metrics = {
         "total_detected": total,
         "raw_detections": total,
         "duplicates_suppressed": 0,
         "avg_confidence": avg_conf,
+        "avg_healthy_confidence": avg_healthy_conf,
         "nms_mode": "Class-Agnostic NMS",
         "iou_threshold": 0.45,
         "conf_threshold": 0.25,
@@ -421,7 +432,7 @@ def download_cached_pdf_report(lot_id: str):
 
 @app.post("/api/v1/grade/image", response_model=GradeResponse, tags=["Grading"])
 async def grade_image(
-    file: UploadFile | None,
+    file: UploadFile,
     lot_id: str = Query("LOT-001", description="Lot identification code"),
     center_id: str = Query("APMC-Nashik-01", description="Procurement center or packhouse name"),
     focal_length_px: float | None = Query(None, description="Optional EXIF focal length in pixels"),
@@ -461,7 +472,7 @@ async def grade_image(
 
 @app.post("/api/v1/grade/report/pdf", tags=["Reporting"])
 async def generate_pdf_report(
-    file: UploadFile | None,
+    file: UploadFile,
     lot_id: str = Query("LOT-001", description="Lot identification code"),
     center_id: str = Query("APMC-Nashik-01", description="Procurement center name"),
     focal_length_px: float | None = Query(None, description="Optional EXIF focal length in pixels"),

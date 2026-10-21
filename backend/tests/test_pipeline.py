@@ -8,16 +8,17 @@ Verifies:
 
 import io
 from pathlib import Path
+
+import app.main as main_module
 import cv2
-from fastapi.testclient import TestClient
 import numpy as np
 import pytest
-
+from app.common.schemas import CalibrationMode, LotReportSummary
 from app.main import app
-import app.main as main_module
 from app.pdf_generator import generate_lot_pdf_report
 from app.pipeline import GradingPipeline
-from app.common.schemas import CalibrationMode, LotReportSummary
+from fastapi.testclient import TestClient
+
 from tests.fixtures.generate_synthetic_set import generate_synthetic_scene
 
 
@@ -106,6 +107,44 @@ def test_pipeline_on_real_onion_image(pipeline_instance, sample_onion_image):
         for prefix in ["Grade-A", "Non-Grade-A", "Reject"]
     )
     assert first_onion.grades.agmark_grade is not None
+    assert first_onion.classification_confidences is not None
+    assert 0.0 <= first_onion.classification_confidences.healthy <= 1.0
+    assert 0.0 <= first_onion.classification_confidences.mechanical_damage <= 1.0
+    assert 0.0 <= first_onion.classification_confidences.rotten <= 1.0
+    assert 0.0 <= first_onion.classification_confidences.sprouted <= 1.0
+
+
+def test_p_healthy_split_vote_mitigation(pipeline_instance, sample_onion_image, monkeypatch):
+    """Verifies that low p_healthy (high aggregate defect probability) with blemish is flagged defective."""
+    from unittest.mock import MagicMock
+    import torch
+
+    # Mock Model 2 output with split-vote defect probabilities:
+    # healthy: 0.30, damage: 0.36, rot: 0.30, sprout: 0.04
+    # Neither damage (0.36 < 0.45), rot (0.30 < 0.45), nor sprout (0.04 < 0.65) trips the single-defect threshold.
+    # But p_healthy = 0.30 (< 0.40).
+    mock_res = MagicMock()
+    mock_probs = MagicMock()
+    mock_probs.data = torch.tensor([0.30, 0.36, 0.30, 0.04])
+    mock_res.probs = mock_probs
+
+    monkeypatch.setattr(pipeline_instance.model2, "predict", lambda *args, **kwargs: [mock_res])
+    # Force defect_pct to 12.0% to test corroboration
+    monkeypatch.setattr(pipeline_instance, "_measure_discolouration_percent", lambda *args, **kwargs: 12.0)
+
+    summary, _ = pipeline_instance.analyze_image(
+        image_bgr=sample_onion_image,
+        lot_id="LOT-SPLIT-VOTE",
+        conf_threshold=0.2,
+    )
+
+    assert summary.total_onions_inspected > 0
+    onion = summary.onions[0]
+    # Should be flagged as damaged (dominant defect among damage/rot/sprout)
+    assert onion.quality_flags.severe_damage is True
+    assert onion.grades.procurement_grade == "Reject (Damaged)"
+    assert onion.classification_confidences.healthy == 0.30
+    assert onion.classification_confidences.mechanical_damage == 0.36
 
 
 def test_discolouration_calculation(pipeline_instance):
