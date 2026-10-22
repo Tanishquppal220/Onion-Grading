@@ -4,6 +4,7 @@ backend/.venv/
 venv/
 ENV/
 
+*.env
 # Python cache
 __pycache__/
 *.py[cod]
@@ -38,3 +39,4 @@ Thumbs.db
 scratch/
 backend/scratch/
 uploads/
+*.pem
