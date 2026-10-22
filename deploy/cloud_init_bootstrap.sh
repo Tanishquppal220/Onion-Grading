@@ -66,10 +66,7 @@ chown -R ubuntu:ubuntu "$APP_DIR"
 # 6. Setup Python 3.12 Virtualenv with PyTorch CPU
 echo "[6/7] Setting up Python virtual environment with PyTorch CPU..."
 cd "$APP_DIR/backend"
-sudo -u ubuntu /usr/local/bin/uv venv .venv --python 3.12
-sudo -u ubuntu /usr/local/bin/uv pip install --no-cache --index-url https://download.pytorch.org/whl/cpu torch torchvision
-sudo -u ubuntu /usr/local/bin/uv pip install --no-cache -r pyproject.toml
-sudo -u ubuntu /usr/local/bin/uv cache clean || true
+sudo -u ubuntu /usr/local/bin/uv sync
 
 # 7. Configure and Start Systemd Services
 echo "[7/7] Configuring systemd services..."
