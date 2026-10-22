@@ -1,0 +1,214 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" width="100%" height="560">
+  <title>Decoupled Two-Stage Vision &amp; Homography Metrology Architecture</title>
+  <desc>System architecture showing Stage 1 instance segmentation, Stage 2 defect classification, ArUco homography metrology, and statutory grading rule engine</desc>
+  <defs>
+    <linearGradient id="bgArch" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0d14"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="blueCard" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981"/>
+    </marker>
+    <marker id="arrowAmber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b"/>
+    </marker>
+    <pattern id="archGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.7" stroke-opacity="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Container -->
+  <rect width="1200" height="560" rx="16" fill="url(#bgArch)" stroke="#1e293b" stroke-width="2"/>
+  <rect width="1200" height="560" rx="16" fill="url(#archGrid)"/>
+
+  <!-- Architecture Header Banner -->
+  <g transform="translate(40, 28)">
+    <text x="0" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="24" font-weight="800" fill="#ffffff" letter-spacing="-0.3">Dual-Stage Decoupled Inference &amp; Optical Metrology Pipeline</text>
+    <text x="0" y="48" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="500" fill="#94a3b8">Resolves resolution mismatch by separating spatial crate localization from high-resolution micro-defect classification</text>
+  </g>
+
+  <!-- Flow Columns (5 Distinct Stages) -->
+
+  <!-- Column 1: Input Acquisition (x: 40, w: 180) -->
+  <g transform="translate(40, 95)">
+    <rect width="180" height="425" rx="12" fill="url(#blueCard)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="180" height="40" rx="12" fill="#1e293b"/>
+    <text x="16" y="26" font-family="'SFMono-Regular', Consolas, monospace" font-size="13" font-weight="700" fill="#38bdf8">1. INTAKE IMAGE</text>
+
+    <!-- Content Blocks inside Col 1 -->
+    <g transform="translate(15, 60)">
+      <rect width="150" height="100" rx="8" fill="#0b1320" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" fill="#e2e8f0">Multi-Bulb Crate</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">15-40 Bulbs/Tray</text>
+      <text x="12" y="68" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">640x640 Native</text>
+      <text x="12" y="88" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#38bdf8">Mobile / Webcam</text>
+    </g>
+
+    <g transform="translate(15, 180)">
+      <rect width="150" height="100" rx="8" fill="#0b1320" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" fill="#f59e0b">Optical Fiducial</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">50mm ArUco Card</text>
+      <text x="12" y="68" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">DICT_4X4_50</text>
+      <text x="12" y="88" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#f59e0b">In-Frame Scale</text>
+    </g>
+
+    <g transform="translate(15, 300)">
+      <rect width="150" height="100" rx="8" fill="#0b1320" stroke="#334155" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" fill="#cbd5e1">Intake Modes</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">• Calibrated Tray</text>
+      <text x="12" y="68" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">• Uncalib. Fallback</text>
+      <text x="12" y="88" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">• Live HUD Stream</text>
+    </g>
+  </g>
+
+  <!-- Arrows from Col 1 to Col 2 -->
+  <line x1="220" y1="205" x2="255" y2="205" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="220" y1="335" x2="255" y2="395" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowAmber)"/>
+
+  <!-- Column 2: Stage 1 Localization & Homography (x: 260, w: 220) -->
+  <g transform="translate(260, 95)">
+    <rect width="220" height="425" rx="12" fill="url(#blueCard)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="220" height="40" rx="12" fill="#1e293b"/>
+    <text x="16" y="26" font-family="'SFMono-Regular', Consolas, monospace" font-size="13" font-weight="700" fill="#10b981">2. STAGE 1 &amp; METROLOGY</text>
+
+    <!-- Stage 1 Seg Card -->
+    <g transform="translate(15, 55)">
+      <rect width="190" height="165" rx="8" fill="#0b1320" stroke="#10b981" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#10b981">YOLOv8n-seg</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#cbd5e1">Instance Segmentation</text>
+      <line x1="12" y1="58" x2="178" y2="58" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="78" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Params: 3.26M (85L)</text>
+      <text x="12" y="98" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">GFLOPs: 11.3 (640px)</text>
+      <text x="12" y="118" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#10b981">Mask mAP50: 96.7%</text>
+      <text x="12" y="138" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#10b981">Box mAP50: 96.3%</text>
+      <text x="12" y="156" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#38bdf8">Latency: 5.0ms (T4)</text>
+    </g>
+
+    <!-- ArUco Homography Card -->
+    <g transform="translate(15, 235)">
+      <rect width="190" height="175" rx="8" fill="#0b1320" stroke="#f59e0b" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#f59e0b">Optical Homography</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#cbd5e1">Planar Perspective Math</text>
+      <line x1="12" y1="58" x2="178" y2="58" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="78" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Corners: 4x2 ArUco</text>
+      <text x="12" y="98" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Homography: H in R^3x3</text>
+      <text x="12" y="118" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Tilt Angle: theta deg</text>
+      <text x="12" y="138" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#f59e0b">Height Cor: h=0.5*d</text>
+      <text x="12" y="158" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#10b981">Scale: pixels / mm</text>
+    </g>
+  </g>
+
+  <!-- Arrows from Col 2 to Col 3 -->
+  <line x1="480" y1="180" x2="515" y2="180" stroke="#10b981" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="480" y1="330" x2="515" y2="330" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrowAmber)"/>
+
+  <!-- Column 3: Normalized ROI Extraction & Caliper (x: 520, w: 200) -->
+  <g transform="translate(520, 95)">
+    <rect width="200" height="425" rx="12" fill="url(#blueCard)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="200" height="40" rx="12" fill="#1e293b"/>
+    <text x="16" y="26" font-family="'SFMono-Regular', Consolas, monospace" font-size="13" font-weight="700" fill="#38bdf8">3. CROPPING &amp; CALIPER</text>
+
+    <!-- Caliper Module -->
+    <g transform="translate(15, 55)">
+      <rect width="170" height="150" rx="8" fill="#0b1320" stroke="#38bdf8" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" fill="#38bdf8">Equatorial Caliper</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#cbd5e1">Per-Bulb Sizing</text>
+      <line x1="12" y1="58" x2="158" y2="58" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="78" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">MinAreaRect / Ellipse</text>
+      <text x="12" y="98" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">d_major &amp; d_minor</text>
+      <text x="12" y="118" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Tilt Corrected mm</text>
+      <text x="12" y="138" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#38bdf8">Accuracy: +-0.4mm</text>
+    </g>
+
+    <!-- Crop Extractor -->
+    <g transform="translate(15, 230)">
+      <rect width="170" height="165" rx="8" fill="#0b1320" stroke="#a855f7" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="700" fill="#a855f7">Normalized ROI</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#cbd5e1">Tile Generation</text>
+      <line x1="12" y1="58" x2="158" y2="58" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="78" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">+8% Safety Margin</text>
+      <text x="12" y="98" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Restores Fungal Pores</text>
+      <text x="12" y="118" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Texture Preservation</text>
+      <text x="12" y="138" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#a855f7">Crop: 224x224 RGB</text>
+      <text x="12" y="156" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">N Crops = N Bulbs</text>
+    </g>
+  </g>
+
+  <!-- Arrows from Col 3 to Col 4 -->
+  <line x1="720" y1="310" x2="755" y2="310" stroke="#a855f7" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="720" y1="130" x2="980" y2="130" stroke="#38bdf8" stroke-width="2"/>
+  <line x1="980" y1="130" x2="980" y2="180" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Column 4: Stage 2 Defect Classification (x: 760, w: 200) -->
+  <g transform="translate(760, 95)">
+    <rect width="200" height="425" rx="12" fill="url(#blueCard)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="200" height="40" rx="12" fill="#1e293b"/>
+    <text x="16" y="26" font-family="'SFMono-Regular', Consolas, monospace" font-size="13" font-weight="700" fill="#a855f7">4. STAGE 2 DEFECT CLS</text>
+
+    <!-- Stage 2 Cls Model -->
+    <g transform="translate(15, 55)">
+      <rect width="170" height="340" rx="8" fill="#0b1320" stroke="#a855f7" stroke-width="1"/>
+      <text x="12" y="26" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#a855f7">YOLOv8n-cls</text>
+      <text x="12" y="48" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#cbd5e1">4-Class Defect Head</text>
+      <line x1="12" y1="58" x2="158" y2="58" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="78" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">Params: 1.44M (30L)</text>
+      <text x="12" y="98" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#94a3b8">GFLOPs: 3.3 (224px)</text>
+      <text x="12" y="118" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#a855f7">Top-1 Acc: 94.3%</text>
+      <text x="12" y="138" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#38bdf8">Latency: 1.9ms (T4)</text>
+
+      <line x1="12" y1="150" x2="158" y2="150" stroke="#1e3a5f" stroke-width="1"/>
+      <text x="12" y="172" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" font-weight="700" fill="#e2e8f0">Class Targets:</text>
+      <text x="12" y="196" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#10b981">0: Healthy (Sound)</text>
+      <text x="12" y="218" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#ef4444">1: Rotten (Fungal)</text>
+      <text x="12" y="240" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#f59e0b">2: Sprouted (Shoot)</text>
+      <text x="12" y="262" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" fill="#e879f9">3: Mech. Damage</text>
+
+      <rect x="12" y="280" width="146" height="42" rx="6" fill="#1e293b"/>
+      <text x="20" y="297" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#94a3b8">Total GPU Pipeline:</text>
+      <text x="20" y="313" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" font-weight="700" fill="#10b981">6.9 ms / Bulb Batch</text>
+    </g>
+  </g>
+
+  <!-- Arrow from Col 4 to Col 5 -->
+  <line x1="960" y1="280" x2="995" y2="280" stroke="#e2e8f0" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Column 5: Rule Engine & Audit Deliverables (x: 1000, w: 160) -->
+  <g transform="translate(1000, 95)">
+    <rect width="160" height="425" rx="12" fill="url(#blueCard)" stroke="#334155" stroke-width="1.5"/>
+    <rect x="0" y="0" width="160" height="40" rx="12" fill="#1e293b"/>
+    <text x="12" y="26" font-family="'SFMono-Regular', Consolas, monospace" font-size="12" font-weight="700" fill="#f59e0b">5. DECISION ENGINE</text>
+
+    <!-- Decision Cards -->
+    <g transform="translate(12, 55)">
+      <rect width="136" height="100" rx="8" fill="#0b1320" stroke="#10b981" stroke-width="1"/>
+      <text x="10" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#10b981">DoCA Mandate</text>
+      <text x="10" y="44" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#cbd5e1">45-65mm Norm</text>
+      <text x="10" y="62" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#94a3b8">Zero Rot Tol.</text>
+      <text x="10" y="80" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#10b981">Grade-A Pass/Rej</text>
+    </g>
+
+    <g transform="translate(12, 170)">
+      <rect width="136" height="100" rx="8" fill="#0b1320" stroke="#38bdf8" stroke-width="1"/>
+      <text x="10" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#38bdf8">AGMARK Tiers</text>
+      <text x="10" y="44" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#cbd5e1">Premium: >65mm</text>
+      <text x="10" y="62" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#cbd5e1">Grade A: 45-65mm</text>
+      <text x="10" y="80" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#cbd5e1">Grade B: 35-45mm</text>
+    </g>
+
+    <g transform="translate(12, 285)">
+      <rect width="136" height="110" rx="8" fill="#0b1320" stroke="#f59e0b" stroke-width="1"/>
+      <text x="10" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#f59e0b">Deliverables</text>
+      <text x="10" y="46" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#e2e8f0">• PDF Certificate</text>
+      <text x="10" y="64" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#94a3b8">  SHA-256 Signed</text>
+      <text x="10" y="82" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#e2e8f0">• Live HUD Stream</text>
+      <text x="10" y="100" font-family="'SFMono-Regular', Consolas, monospace" font-size="11" fill="#94a3b8">  60 FPS Mobile</text>
+    </g>
+  </g>
+</svg>
