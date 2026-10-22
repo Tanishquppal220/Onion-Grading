@@ -85,9 +85,9 @@ case "$ACTION" in
     # Update IP in env file
     sed -i "s/^PUBLIC_IP=.*/PUBLIC_IP=\"$IP\"/" "$ENV_FILE" 2>/dev/null || true
 
-    echo "Restarting Cloudflare tunnel to obtain new public HTTPS URL..."
+    echo "Ensuring services are running & refreshing Cloudflare tunnel..."
     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i "$KEY_FILE" "ubuntu@$IP" \
-      'sudo systemctl restart onion-tunnel.service && sleep 4 && cat /home/ubuntu/TUNNEL_URL.txt 2>/dev/null' || true
+      'sudo systemctl start onion-grading.service && sudo systemctl restart onion-tunnel.service' || true
     
     echo -e "\nFetching new live HTTPS URL..."
     for i in {1..15}; do
@@ -95,6 +95,8 @@ case "$ACTION" in
         "grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' /var/log/cloudflared.log | tail -n 1 2>/dev/null" || true)
       if [[ -n "$URL" ]]; then
         echo -e "\n  📱 ${BOLD}${GREEN}LIVE HTTPS URL:${NC} ${CYAN}${BOLD}$URL${NC}\n"
+        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -i "$KEY_FILE" "ubuntu@$IP" \
+          "echo '$URL' > /home/ubuntu/TUNNEL_URL.txt" 2>/dev/null || true
         break
       fi
       sleep 2

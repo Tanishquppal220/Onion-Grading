@@ -9,9 +9,12 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REGION="${AWS_REGION:-ap-south-1}"
 INSTANCE_TYPE="${1:-t3.micro}"
 KEY_NAME="${2:-}"
+USER_DATA_FILE="$SCRIPT_DIR/cloud_init_bootstrap.sh"
+ENV_FILE="$SCRIPT_DIR/.ec2_instance_info.env"
 
 echo "=================================================================="
 echo "  🧅 Launching EC2 Micro Instance for Onion Grading"
@@ -85,14 +88,20 @@ AMI_ID=$(aws ec2 describe-images --region "$REGION" \
   --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text)
 echo "✓ AMI ID: $AMI_ID"
 
-# 4. Launch EC2 Instance with 10 GB gp3 storage
-echo -e "\n[4/5] Launching $INSTANCE_TYPE instance..."
+# 4. Launch EC2 Instance with 15 GB gp3 storage (within AWS 30GB Free Tier)
+echo -e "\n[4/5] Launching $INSTANCE_TYPE instance with automated Cloud-Init..."
+USER_DATA_ARG=()
+if [[ -f "$USER_DATA_FILE" ]]; then
+  USER_DATA_ARG=(--user-data "file://$USER_DATA_FILE")
+fi
+
 INSTANCE_ID=$(aws ec2 run-instances \
   --image-id "$AMI_ID" \
   --instance-type "$INSTANCE_TYPE" \
   --key-name "$KEY_NAME" \
   --security-group-ids "$SG_ID" \
-  --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":10,"VolumeType":"gp3"}}]' \
+  "${USER_DATA_ARG[@]}" \
+  --block-device-mappings '[{"DeviceName":"/dev/sda1","Ebs":{"VolumeSize":15,"VolumeType":"gp3"}}]' \
   --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=onion-grading-demo}]' \
   --region "$REGION" \
   --query 'Instances[0].InstanceId' --output text)
@@ -104,16 +113,23 @@ aws ec2 wait instance-running --instance-ids "$INSTANCE_ID" --region "$REGION"
 
 PUBLIC_IP=$(aws ec2 describe-instances --instance-ids "$INSTANCE_ID" --region "$REGION" --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
 
+# Save metadata for manage_ec2.sh
+cat << EOF > "$ENV_FILE"
+INSTANCE_ID="$INSTANCE_ID"
+REGION="$REGION"
+KEY_NAME="$KEY_NAME"
+KEY_FILE="$SCRIPT_DIR/${KEY_NAME}.pem"
+INSTANCE_TYPE="$INSTANCE_TYPE"
+PUBLIC_IP="$PUBLIC_IP"
+EOF
+
 echo -e "\n=================================================================="
 echo "  🚀 Instance Ready!"
 echo "  Instance ID: $INSTANCE_ID"
 echo "  Public IP:   $PUBLIC_IP"
+echo "  SSH:         ssh -i \"$KEY_NAME.pem\" ubuntu@$PUBLIC_IP"
 echo "=================================================================="
-echo "Next step: Connect via SSH and run the setup script:"
-echo ""
-echo "  ssh -i \"$KEY_NAME.pem\" ubuntu@$PUBLIC_IP"
-echo "  git clone -b deploy https://github.com/Tanishquppal220/Onion-Grading.git"
-echo "  cd Onion-Grading"
-echo "  chmod +x deploy/setup_micro_ec2.sh deploy/start_tunnel.sh"
-echo "  ./deploy/setup_micro_ec2.sh"
+echo "Automated setup is bootstrapping in the background."
+echo "To get your live HTTPS URL once ready, run:"
+echo "  ./deploy/manage_ec2.sh url"
 echo "=================================================================="

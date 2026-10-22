@@ -78,17 +78,22 @@ cd "$BACKEND_DIR"
 
 # Install lightweight PyTorch CPU wheels into virtualenv first (avoids CUDA download)
 uv venv .venv --python 3.12
-uv pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
-uv sync
+uv pip install --no-cache --index-url https://download.pytorch.org/whl/cpu torch torchvision
+uv pip install --no-cache -r pyproject.toml
+uv cache clean || true
 
-# 6. Configure & Start Systemd Service
-echo -e "\n[6/6] Configuring Systemd service 'onion-grading.service'..."
+# 6. Configure & Start Systemd Services (Backend + Cloudflare Quick Tunnel)
+echo -e "\n[6/6] Configuring Systemd services..."
 USER_NAME=$(whoami)
-SERVICE_FILE="/etc/systemd/system/onion-grading.service"
 
-sudo bash -c "cat << 'EOF' > $SERVICE_FILE
+# Pre-create cloudflared log file with write permissions
+sudo touch /var/log/cloudflared.log
+sudo chmod 666 /var/log/cloudflared.log
+
+# Service 1: Backend FastAPI
+sudo tee /etc/systemd/system/onion-grading.service > /dev/null << EOF
 [Unit]
-Description=Onion Quality Assessment & Autonomous Grading Backend
+Description=Onion Quality Assessment & Autonomous Grading Service
 After=network.target
 
 [Service]
@@ -102,23 +107,48 @@ Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
-EOF"
+EOF
+
+# Service 2: Cloudflare Quick Tunnel
+sudo tee /etc/systemd/system/onion-tunnel.service > /dev/null << EOF
+[Unit]
+Description=Cloudflare Quick Tunnel for Onion Grading
+After=onion-grading.service
+Wants=onion-grading.service
+
+[Service]
+Type=simple
+User=$USER_NAME
+ExecStart=/usr/local/bin/cloudflared tunnel --url http://127.0.0.1:8000 --logfile /var/log/cloudflared.log
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable onion-grading
-sudo systemctl restart onion-grading
+sudo systemctl enable --now onion-grading.service onion-tunnel.service
 
-echo -e "\nWaiting 5 seconds for service to initialize..."
-sleep 5
+echo -e "\nWaiting 6 seconds for services to initialize..."
+sleep 6
 
 # Healthcheck
 if curl -s http://127.0.0.1:8000/api/health | grep -q "status"; then
   echo -e "\n=================================================================="
   echo "  ✅ Onion Grading is LIVE on http://localhost:8000"
   echo "=================================================================="
-  echo "To launch your free Cloudflare HTTPS link for mobile testing, run:"
-  echo ""
-  echo "  ./deploy/start_tunnel.sh"
+  
+  # Fetch live tunnel URL
+  LIVE_URL=$(grep -o 'https://[-a-zA-Z0-9.]*\.trycloudflare\.com' /var/log/cloudflared.log 2>/dev/null | tail -n 1 || true)
+  if [[ -n "$LIVE_URL" ]]; then
+    echo "$LIVE_URL" > "$HOME/TUNNEL_URL.txt" 2>/dev/null || true
+    echo -e "  📱 LIVE HTTPS MOBILE / DEMO URL:"
+    echo -e "  👉 $LIVE_URL"
+  else
+    echo "  Live tunnel starting up. To check your URL, run:"
+    echo "  grep -o 'https://.*trycloudflare.com' /var/log/cloudflared.log | tail -n 1"
+  fi
   echo "=================================================================="
 else
   echo -e "\n[!] Warning: Healthcheck did not immediately respond. Check logs:"

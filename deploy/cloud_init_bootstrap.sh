@@ -67,11 +67,16 @@ chown -R ubuntu:ubuntu "$APP_DIR"
 echo "[6/7] Setting up Python virtual environment with PyTorch CPU..."
 cd "$APP_DIR/backend"
 sudo -u ubuntu /usr/local/bin/uv venv .venv --python 3.12
-sudo -u ubuntu /usr/local/bin/uv pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision
-sudo -u ubuntu /usr/local/bin/uv sync
+sudo -u ubuntu /usr/local/bin/uv pip install --no-cache --index-url https://download.pytorch.org/whl/cpu torch torchvision
+sudo -u ubuntu /usr/local/bin/uv pip install --no-cache -r pyproject.toml
+sudo -u ubuntu /usr/local/bin/uv cache clean || true
 
 # 7. Configure and Start Systemd Services
 echo "[7/7] Configuring systemd services..."
+
+# Ensure cloudflared log file exists with write permissions for ubuntu user
+touch /var/log/cloudflared.log
+chmod 666 /var/log/cloudflared.log
 
 # Service 1: Backend FastAPI
 cat << 'EOF' > /etc/systemd/system/onion-grading.service
