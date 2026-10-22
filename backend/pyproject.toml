@@ -5,6 +5,8 @@ description = "Handheld AI onion quality assessment and multi-standard grading"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "torch>=2.2.0",
+    "torchvision>=0.17.0",
     "ultralytics>=8.3.0",
     "opencv-python-headless>=4.10.0",
     "numpy>=1.26.0",
@@ -20,6 +22,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "reportlab>=4.2.0",
     "httpx>=0.27.0",
+    
 ]
 
 [tool.uv.sources]
