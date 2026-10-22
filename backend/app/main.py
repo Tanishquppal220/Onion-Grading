@@ -531,3 +531,10 @@ def get_eval_plot(plot_name: str):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="Evaluation plot not found.")
     return FileResponse(file_path)
+
+
+# Mount pre-built frontend distribution if present (production single-port mode)
+FRONTEND_DIST = BACKEND_DIR.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST), html=True), name="frontend")
+
